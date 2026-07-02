@@ -6,7 +6,7 @@ import MenuButton from '../components/MenuButton';
 // MVP용 고정 사용자 ID
 const FIXED_USER_ID = "user_test_123";
 
-export default function AddGoalScreen() {
+export default function AddGoalScreen({ navigation }: any) {
 
     const handlePress = (type: string) => {
         console.log(`User ID: ${FIXED_USER_ID}님이 ${type}을(를) 선택했습니다.`);
