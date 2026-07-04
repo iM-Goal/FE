@@ -11,7 +11,8 @@ import ChatScreen from "./src/screens/ChatScreen";
 //import SignupScreen from './src/screens/SignupScreen';
 //import HomeScreen from './src/screens/HomeScreen';
 //import AddGoalScreen from './src/screens/AddGoalScreen';
-import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
+import VoiceRecordScreen from "./src/screens/VoiceRecordScreen";
+import SearchGoalScreen from "./src/screens/SearchGoalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -19,7 +20,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login" // 첫 시작점은 로그인 화면!
+        initialRouteName="SearchGoalScreen" // 첫 시작점은 로그인 화면!
         screenOptions={{
           headerShown: false, // 피그마 커스텀 헤더를 쓸 것이므로 네이티브 상단 바는 숨김
           cardStyle: { backgroundColor: "#F8FAFC" },
@@ -30,9 +31,9 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="AddGoal" component={AddGoalScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
-        <Stack.Screen name="VoiceRecord" component= {VoiceRecordScreen} />
+        <Stack.Screen name="VoiceRecord" component={VoiceRecordScreen} />
+        <Stack.Screen name="SearchGoalScreen" component={SearchGoalScreen} />
       </Stack.Navigator>
     </NavigationContainer>
-     
   );
 }
