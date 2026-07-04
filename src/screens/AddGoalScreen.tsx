@@ -10,7 +10,12 @@ export default function AddGoalScreen({ navigation }: any) {
 
     const handlePress = (type: string) => {
         console.log(`User ID: ${FIXED_USER_ID}님이 ${type}을(를) 선택했습니다.`);
-        // 여기서 나중에 BE API 연동이나 화면 이동(Navigation)을 처리합니다.
+
+        if (type === '음성인식') {
+            navigation.navigate('VoiceRecord'); // 🆕 VoiceRecordScreen으로 연동 점프!
+        } else {
+            // 사진이나 링크 업로드 등은 추후 구현
+        }
     };
 
     return (
@@ -21,20 +26,17 @@ export default function AddGoalScreen({ navigation }: any) {
                     <Ionicons name="close-circle" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>새로운 목표 추가</Text>
-                <View style={{ width: 28 }} /> {/* 좌우 밸런스를 위한 더미 공간 */}
+                <View style={{ width: 28 }}/>
             </View>
 
             {/* 중앙 캐릭터 영역 */}
             <View style={styles.characterContainer}>
-
                 <Image source={require('../../assets/char_blue.png')} style={styles.characterImage} />
             </View>
-
             {/* 하단 화이트 카드 영역 */}
             <View style={styles.cardContainer}>
                 <Text style={styles.mainTitle}>뭐 사고 싶어?</Text>
                 <Text style={styles.subTitle}>자유롭게 입력해보세요!</Text>
-
                 {/* 버튼 리스트 */}
                 <View style={styles.buttonList}>
                     <MenuButton
