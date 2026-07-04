@@ -13,6 +13,7 @@ import ChatScreen from "./src/screens/ChatScreen";
 //import AddGoalScreen from './src/screens/AddGoalScreen';
 import VoiceRecordScreen from "./src/screens/VoiceRecordScreen";
 import SearchGoalScreen from "./src/screens/SearchGoalScreen";
+import CheckGoalScreen from "./src/screens/CheckGoalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,7 @@ export default function App() {
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="VoiceRecord" component={VoiceRecordScreen} />
         <Stack.Screen name="SearchGoalScreen" component={SearchGoalScreen} />
+        <Stack.Screen name="CheckGoalScreen" component={CheckGoalScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
