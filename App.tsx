@@ -1,6 +1,9 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useFonts } from 'expo-font';
+
+
 
 import LoginScreen from "./src/screens/LoginScreen";
 import SignupScreen from "./src/screens/SignupScreen";
@@ -14,6 +17,11 @@ import CheckGoalScreen from "./src/screens/CheckGoalScreen";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+    const [fontsLoaded] = useFonts({
+        'IM_Hyemin-Bold': require('./assets/fonts/IM_Hyemin-Bold.otf'),
+        'IM_Hyemin-Regular': require('./assets/fonts/IM_Hyemin-Regular.otf'),
+    });
+    if (!fontsLoaded) return null;
   return (
     <NavigationContainer>
       <Stack.Navigator

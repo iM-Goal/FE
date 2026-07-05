@@ -130,7 +130,7 @@ export default function VoiceRecordScreen({ navigation }: any) {
         // 알림창은 그대로 띄워서 다음 플로우 확인 가능하게
         Alert.alert('분석 준비 완료', '음성 녹음이 끝났습니다. AI 분석 화면으로 넘어갈까요?', [
             { text: '다시 말하기', style: 'cancel', onPress: () => setSpeechText('아래 버튼을 눌러 말씀해주세요.') },
-            { text: '다음단계 (이동)', onPress: () => navigation.goBack() } //분석 화면으로 넘어가야됨 (여기에 추가해주세요)
+            { text: '다음단계 (이동)', onPress: () => navigation.navigate('SearchGoalScreen') } //분석 화면으로 넘어가야됨 (여기에 추가해주세요)
         ]);
     };
    /* const stopRecordingFlow = async () => {

@@ -86,9 +86,15 @@ export default function HomeScreen({ navigation }: any) {
     const loadingAnimation = Animated.parallel(animations);
 
     loadingAnimation.start();
+    //3초뒤 자동 분석하고 넘어가는 타이머 장치
+    const flowTimer = setTimeout(() => {
+      console.log("🤖 AI 분석 완료! CheckGoalScreen으로 자동 이동합니다.");
+      navigation.navigate("CheckGoalScreen"); // 내비게이션에 등록된 이름으로 매칭
+    }, 3000); // 3000ms = 3초 (로딩을 보여주기에 가장 적절한 몰입 시간)
 
     return () => loadingAnimation.stop();
-  }, [dotAnimations]);
+    clearTimeout(flowTimer);
+  }, [dotAnimations, navigation]);
 
   const goToNextSlide = () => {
     setActiveSlide((current) => (current + 1) % slides.length);

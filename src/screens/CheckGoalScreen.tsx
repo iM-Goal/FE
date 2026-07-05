@@ -21,9 +21,9 @@ type AnalyzedGoal = {
 
 const analyzedGoal: AnalyzedGoal = {
   title: "제주도 푸른 바다 여행",
-  price: "450,000원",
-  period: "3개월",
-  speed: "단기 (1~3개월)",
+  price: "300,000원",
+  period: "1개월",
+  speed: "8월 30일까지",
 };
 
 const BASE_SCREEN_WIDTH = 251;
@@ -49,11 +49,15 @@ export default function CheckGoalScreen({ navigation }: any) {
   };
 
   const handleRegisterPress = () => {
+
     const routeNames = navigation?.getState?.().routeNames;
     const canOpenGoal = routeNames?.includes?.("GoalDetail");
 
     if (canOpenGoal) {
-      navigation.navigate("GoalDetail", { goal: analyzedGoal });
+      navigation.navigate("GoalDetail", { goal: analyzedGoal , registeredSuccess: true});
+    }else{
+      console.log("HomeScreen으로 성공 신호를 보냅니다");
+      navigation.navigate("Home", {registeredSuccess: true});
     }
   };
 
@@ -135,7 +139,7 @@ export default function CheckGoalScreen({ navigation }: any) {
             </View>
 
             <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>추천 저축 속도</Text>
+              <Text style={styles.infoLabel}>언제까지?</Text>
               <Text style={styles.infoValue}>{analyzedGoal.speed}</Text>
             </View>
           </View>
