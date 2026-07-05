@@ -7,7 +7,9 @@ import SignupScreen from "./src/screens/SignupScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import AddGoalScreen from "./src/screens/AddGoalScreen";
 import ChatScreen from "./src/screens/ChatScreen";
-import VoiceRecordScreen from './src/screens/VoiceRecordScreen';
+import VoiceRecordScreen from "./src/screens/VoiceRecordScreen";
+import SearchGoalScreen from "./src/screens/SearchGoalScreen";
+import CheckGoalScreen from "./src/screens/CheckGoalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -25,10 +27,11 @@ export default function App() {
         <Stack.Screen name="Signup" component={SignupScreen} />*/}
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="AddGoal" component={AddGoalScreen} />
-       {/* <Stack.Screen name="ChatScreen" component={ChatScreen} />*/}
-        <Stack.Screen name="VoiceRecord" component= {VoiceRecordScreen} />
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="VoiceRecord" component={VoiceRecordScreen} />
+        <Stack.Screen name="SearchGoalScreen" component={SearchGoalScreen} />
+        <Stack.Screen name="CheckGoalScreen" component={CheckGoalScreen} />
       </Stack.Navigator>
     </NavigationContainer>
-     
   );
 }
