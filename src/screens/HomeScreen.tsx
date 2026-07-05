@@ -4,13 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur'; //
 
-export default function HomeScreen({ navigation }: any) {
+export default function HomeScreen({ navigation, route }: any) {
   // 목표 등록 상태 State (true: 등록 완료 상태(제주도 여행) / false: 빈 상태)
   const [hasGoal, setHasGoal] = useState(false);
+
+  React.useEffect(() => {
+    if (route.params?.registeredSuccess) {
+      setHasGoal(true); // 목표 등록 성공 신호가 오면 수동 터치 없이 자동으로 true 전환
+    }
+  }, [route.params?.registeredSuccess]);
+
 
   // 1. 목표가 없을 때 보여주는 빈 화면 UI
   const renderEmptyState = () => (
       <View style={styles.emptyContainer}>
+        <View style={styles.logoHeader}>
+          <Text style={styles.logo}>
+            <Text style={styles.logoDot}>iM</Text> Agent
+            <Text style={styles.logoAccent}>iX</Text>
+          </Text>
+        </View>
         <View style={styles.emptyHeader}>
           <Text style={styles.welcomeText}>아이엠님 👋</Text>
           <Text style={styles.subWelcomeText}>나만의 특별한 재무 페이스메이커</Text>
@@ -45,19 +58,26 @@ export default function HomeScreen({ navigation }: any) {
   const renderActiveState = () => (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
+        <View style={[styles.logoHeader, { paddingHorizontal: 0, marginBottom: 16 }]}>
+          <Text style={styles.logo}>
+            <Text style={styles.logoDot}>iM</Text> Agent
+            <Text style={styles.logoAccent}>iX</Text>
+          </Text>
+        </View>
         {/* 상단 웰컴 헤더 */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcomeText}>아이엠님 👋</Text>
             <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
           </View>
-          <TouchableOpacity style={styles.notiButton}>
-            <Ionicons name="notifications" size={26} color="#111827" />
+          <TouchableOpacity style={styles.notiButton}
+          onPress={() => navigation.navigate('ChatScreen')}>
+            <Ionicons name="notifications" size={35} color="#009d8b" />
           </TouchableOpacity>
         </View>
 
         {/* 상단 민트색 캐릭터 말풍선 가이드 */}
-        <View style={styles.characterSection}>
+    -    <View style={styles.characterSection}>
           <View style={styles.speechBubble}>
             <Text style={styles.speechText}>오늘은 아주 좋은 페이스예요! 🎉</Text>
             <Text style={styles.speechText}>이대로만 가면 목표를 달성할 수 있어요!</Text>
@@ -220,6 +240,19 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
+  logoHeader: {
+    alignItems: "flex-start",
+    paddingHorizontal: 4,
+    marginBottom: 20,
+  },
+  logo: {
+    color: "#151b1e",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0,
+  },
+  logoDot: { color: "#009d8b" },
+  logoAccent: { color: "#009d8b" },
   // 목표가 없을 때 (Empty State) 스타일 시트
   emptyContainer: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
   emptyHeader: { marginBottom: -160 },
@@ -260,9 +293,11 @@ const styles = StyleSheet.create({
   welcomeText: { fontSize: 26, fontWeight: 'bold', color: '#000000', letterSpacing: -0.5 },
   subWelcomeText: { fontSize: 14, color: '#111827', marginTop: 5, fontWeight: '700' },
   notiButton: { padding: 4 },
-  characterSection: { alignItems: 'center', marginBottom: 12, width: '100%' },
-  speechBubble: { backgroundColor: '#C1F2E8', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, width: '100%', position: 'relative' },
-  speechText: { color: '#000000', fontSize: 15, fontWeight: 'bold', textAlign: 'left', lineHeight: 22 },
+  characterSection: { alignItems: 'flex-start', marginBottom: 12, width: '100%' },
+  speechBubble: { backgroundColor: '#C1F2E8', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, alignSelf: 'flex-start',
+    position: 'relative',
+    marginLeft: 15, },
+  speechText: { color: '#000000', fontSize: 15, fontFamily: 'IM_Hyemin-Bold', fontWeight: 'bold', textAlign: 'left', lineHeight: 22 },
   speechTriangle: { position: 'absolute', bottom: -8, left: 35, width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C1F2E8' },
   characterRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, marginTop: -20 },
   avatarImage: { width: 160, height: 150, resizeMode: 'contain',zIndex: 10},
