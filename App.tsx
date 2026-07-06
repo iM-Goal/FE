@@ -1,6 +1,10 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+<<<<<<< Updated upstream
+=======
+import { useFonts } from "expo-font";
+>>>>>>> Stashed changes
 
 import LoginScreen from "./src/screens/LoginScreen";
 import SignupScreen from "./src/screens/SignupScreen";
@@ -17,10 +21,22 @@ import SearchGoalScreen from "./src/screens/SearchGoalScreen";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+<<<<<<< Updated upstream
   return (
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName="Login" // 첫 시작점은 로그인 화면!
+=======
+  const [fontsLoaded] = useFonts({
+    "IM_Hyemin-Bold": require("./assets/fonts/IM_Hyemin-Bold.otf"),
+    "IM_Hyemin-Regular": require("./assets/fonts/IM_Hyemin-Regular.otf"),
+  });
+  if (!fontsLoaded) return null;
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+      /* initialRouteName="Login" // 첫 시작점은 로그인 화면!
+>>>>>>> Stashed changes
         screenOptions={{
           headerShown: false, // 피그마 커스텀 헤더를 쓸 것이므로 네이티브 상단 바는 숨김
           cardStyle: { backgroundColor: "#F8FAFC" },
