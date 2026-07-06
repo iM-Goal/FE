@@ -53,13 +53,9 @@ export default function HomeScreen({ navigation }: any) {
     [0, 1, 2].map(() => new Animated.Value(0)),
   ).current;
   const hasGoals = dashboard.goals.length > 0;
-  const frameWidth = Math.min(width, BASE_SCREEN_WIDTH);
-  const widthScale = Math.min(frameWidth / BASE_SCREEN_WIDTH, 1);
-  const heightScale = Math.min(
-    Math.max(height / BASE_SCREEN_HEIGHT, 0.86),
-    1.22,
-  );
-  const sizeScale = Math.min(widthScale, 1);
+  const widthScale = width / BASE_SCREEN_WIDTH;
+  const heightScale = height / BASE_SCREEN_HEIGHT;
+  const sizeScale = width / BASE_SCREEN_WIDTH;
 
   useEffect(() => {
     const animations = dotAnimations.map((animation, index) =>
@@ -111,26 +107,58 @@ export default function HomeScreen({ navigation }: any) {
 
   const dynamicStyles = {
     content: {
-      maxWidth: BASE_SCREEN_WIDTH,
+      maxWidth: BASE_SCREEN_WIDTH * sizeScale,
+      flexGrow: 1,
       minHeight: height,
       paddingHorizontal: 16 * sizeScale,
       paddingTop: 30 * heightScale,
       paddingBottom: 26 * heightScale,
+      justifyContent: "space-between" as const,
     },
     header: {
       marginBottom: 32 * heightScale,
     },
+    logo: {
+      fontSize: 16 * sizeScale,
+    },
+    title: {
+      fontSize: 20 * sizeScale,
+      lineHeight: 26 * sizeScale,
+      marginBottom: 9 * heightScale,
+    },
+    description: {
+      fontSize: 11 * sizeScale,
+      lineHeight: 16 * sizeScale,
+    },
     characterButton: {
-      height: 205 * heightScale,
-      marginTop: -6 * heightScale,
+      height: 205 * sizeScale,
+      marginTop: 24 * heightScale,
     },
     character: {
       width: 206 * sizeScale,
       height: 236 * sizeScale,
     },
     pagination: {
-      marginTop: 3 * heightScale,
+      marginTop: 24 * heightScale,
       marginBottom: 34 * heightScale,
+      gap: 12 * sizeScale,
+    },
+    pageDot: {
+      width: 5 * sizeScale,
+      height: 5 * sizeScale,
+      borderRadius: (5 * sizeScale) / 2,
+    },
+    noticeCard: {
+      maxWidth: 300 * sizeScale,
+      minHeight: 34 * sizeScale,
+      paddingHorizontal: 14 * sizeScale,
+      paddingVertical: 9 * sizeScale,
+      borderRadius: 8 * sizeScale,
+      gap: 5 * sizeScale,
+    },
+    noticeText: {
+      fontSize: 10 * sizeScale,
+      lineHeight: 14 * sizeScale,
     },
   };
 
@@ -147,15 +175,17 @@ export default function HomeScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.header, dynamicStyles.header]}>
-          <Text style={styles.logo}>
+          <Text style={[styles.logo, dynamicStyles.logo]}>
             <Text style={styles.logoDot}>iM</Text> Agent
             <Text style={styles.logoAccent}>iX</Text>
           </Text>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.title}>{slides[activeSlide].title}</Text>
-          <Text style={styles.description}>
+          <Text style={[styles.title, dynamicStyles.title]}>
+            {slides[activeSlide].title}
+          </Text>
+          <Text style={[styles.description, dynamicStyles.description]}>
             {slides[activeSlide].description}
           </Text>
 
@@ -187,6 +217,7 @@ export default function HomeScreen({ navigation }: any) {
                   key={index}
                   style={[
                     styles.pageDot,
+                    dynamicStyles.pageDot,
                     index === 0 && styles.pageDotStrong,
                     index === 1 && styles.pageDotMedium,
                     {
@@ -203,11 +234,11 @@ export default function HomeScreen({ navigation }: any) {
         {!hasGoals && (
           <TouchableOpacity
             activeOpacity={0.85}
-            style={styles.noticeCard}
+            style={[styles.noticeCard, dynamicStyles.noticeCard]}
             onPress={handleNoticePress}
           >
-            <Ionicons name="sparkles" size={15} color="#009d8b" />
-            <Text style={styles.noticeText}>
+            <Ionicons name="sparkles" size={15 * sizeScale} color="#009d8b" />
+            <Text style={[styles.noticeText, dynamicStyles.noticeText]}>
               요청하신 에이전스 상품을 찾고있어요
             </Text>
           </TouchableOpacity>
@@ -256,7 +287,6 @@ const styles = StyleSheet.create({
   content: {
     minHeight: "100%",
     width: "100%",
-    maxWidth: 390,
     alignSelf: "center",
     paddingHorizontal: 16,
     paddingTop: 30,
@@ -268,7 +298,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: "#151b1e",
-    fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0,
   },
@@ -283,17 +312,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#101719",
-    fontSize: 20,
     fontWeight: "800",
-    lineHeight: 26,
-    marginBottom: 9,
     textAlign: "center",
   },
   description: {
     color: "#293335",
-    fontSize: 11,
     fontWeight: "700",
-    lineHeight: 16,
     textAlign: "center",
   },
   characterButton: {
@@ -301,7 +325,7 @@ const styles = StyleSheet.create({
     height: 205,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -6,
+    marginTop: 24,
   },
   character: {
     width: 206,
@@ -330,11 +354,7 @@ const styles = StyleSheet.create({
   },
   noticeCard: {
     width: "100%",
-    maxWidth: 300,
-    minHeight: 34,
     alignSelf: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
     borderRadius: 8,
     backgroundColor: "#eafffb",
     borderWidth: 1,
@@ -350,12 +370,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
   },
   noticeText: {
     color: "#0f2225",
-    fontSize: 10,
     fontWeight: "800",
-    lineHeight: 14,
   },
 });
