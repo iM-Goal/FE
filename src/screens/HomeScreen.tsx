@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur'; //
+import { BlurView } from 'expo-blur';
 
 export default function HomeScreen({ navigation, route }: any) {
   // 목표 등록 상태 State (true: 등록 완료 상태(제주도 여행) / false: 빈 상태)
-  const [hasGoal, setHasGoal] = useState(false);
+  const [hasGoal, setHasGoal] = useState(true);
 
   React.useEffect(() => {
     if (route.params?.registeredSuccess) {
@@ -14,14 +14,12 @@ export default function HomeScreen({ navigation, route }: any) {
     }
   }, [route.params?.registeredSuccess]);
 
-
   // 1. 목표가 없을 때 보여주는 빈 화면 UI
   const renderEmptyState = () => (
       <View style={styles.emptyContainer}>
         <View style={styles.logoHeader}>
           <Text style={styles.logo}>
-            <Text style={styles.logoDot}>iM</Text> Agent
-            <Text style={styles.logoAccent}>iX</Text>
+            <Text style={styles.logoDot}>iM</Text> Bank <Text style={styles.logoAccent}>AgentiX</Text>
           </Text>
         </View>
         <View style={styles.emptyHeader}>
@@ -30,12 +28,10 @@ export default function HomeScreen({ navigation, route }: any) {
         </View>
 
         <View style={styles.emptyCenter}>
-          {/* 캐릭터 위치를 왼쪽으로 치우치게 조정 */}
           <View style={styles.emptyCharacterWrapper}>
             <Image source={require('../../assets/main_blue.png')} style={styles.emptyCharacterImage} />
           </View>
 
-          {/* 💡 텍스트와 버튼을 담은 라운드 카드 박스 */}
           <View style={styles.emptyCard}>
             <Text style={styles.emptyMainText}>아직 설정된 목표가 없어요</Text>
             <Text style={styles.emptySubText}>
@@ -54,40 +50,36 @@ export default function HomeScreen({ navigation, route }: any) {
       </View>
   );
 
-  // 2. 목표가 생겼을 때 보여주는 활성화 화면 UI (요청하신 시안 100% 반영)
+  // 2. 목표가 생겼을 때 보여주는 활성화 화면 UI
   const renderActiveState = () => (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         <View style={[styles.logoHeader, { paddingHorizontal: 0, marginBottom: 16 }]}>
           <Text style={styles.logo}>
-            <Text style={styles.logoDot}>iM</Text> Agent
-            <Text style={styles.logoAccent}>iX</Text>
+            <Text style={styles.logoDot}>iM</Text> Bank <Text style={styles.logoAccent}>AgentiX</Text>
           </Text>
         </View>
+
         {/* 상단 웰컴 헤더 */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcomeText}>아이엠님 👋</Text>
             <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
           </View>
-          <TouchableOpacity style={styles.notiButton}
-          onPress={() => navigation.navigate('ChatScreen')}>
-            <Ionicons name="notifications" size={35} color="#009d8b" />
+          <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('ChatScreen')}>
+            <Ionicons name="notifications-outline" size={30} color="#004B87" />
           </TouchableOpacity>
         </View>
 
         {/* 상단 민트색 캐릭터 말풍선 가이드 */}
-    -    <View style={styles.characterSection}>
+        <View style={styles.characterSection}>
           <View style={styles.speechBubble}>
-            <Text style={styles.speechText}>오늘은 아주 좋은 페이스예요! 🎉</Text>
-            <Text style={styles.speechText}>이대로만 가면 목표를 달성할 수 있어요!</Text>
-            {/* 말풍선 꼬리 밑부분 처리 */}
+            <Text style={styles.speechText}>현재 페이스를 아주 잘 유지하고 있어요! 🎉</Text>
+            <Text style={[styles.speechText, { marginTop: 2 }]}>이대로 목표 금액까지 함께 달려가요.</Text>
             <View style={styles.speechTriangle} />
           </View>
           <View style={styles.characterRow}>
-
-              <Image source={require('../../assets/main_blue.png')} style={styles.avatarImage} />
-
+            <Image source={require('../../assets/main_blue.png')} style={styles.avatarImage} />
             <View style={styles.islandContainer}>
               <Image source={require('../../assets/palm.png')} style={styles.islandImage} />
             </View>
@@ -98,23 +90,24 @@ export default function HomeScreen({ navigation, route }: any) {
         <View style={styles.goalCard}>
           <Text style={styles.goalTitle}>제주도 여행</Text>
 
-          <View style={styles.goalInfoRow}>
-            <View style={styles.goalDetails}>
-              <Text style={styles.detailLabelText}>목표 금액 : 300,000원</Text>
-              <Text style={[styles.detailAmountText, { marginTop: 14 }]}>
-                <Text style={styles.mintHighlightText}>204,000원</Text> 모았어요
-              </Text>
-              <Text style={styles.detailAmountText}>
-                <Text style={styles.pinkHighlightText}>96,000원</Text> 남았어요
-              </Text>
-            </View>
+          {/* 제주도 여행 목표 달성 카드 */}
+            <View style={styles.goalInfoRow}>
+              <View style={styles.goalDetails}>
+                <Text style={styles.detailLabelText}>목표 금액 : 300,000원</Text>
+                <Text style={[styles.detailAmountText, { marginTop: 14 }]}>
+                  <Text style={styles.mintHighlightText}>204,000원</Text> 모았어요
+                </Text>
+                <Text style={styles.detailAmountText}>
+                  <Text style={styles.pinkHighlightText}>96,000원</Text> 남았어요
+                </Text>
+              </View>
 
-            <View style={styles.percentContainer}>
+
+              <View style={styles.percentContainer}>
               <Text style={styles.percentText}>68%</Text>
             </View>
           </View>
 
-          {/* 프로그레스 바 스트립 디자인 */}
           <View style={styles.progressBarBackground}>
             <View style={[styles.progressBarFill, { width: '68%' }]} />
           </View>
@@ -123,116 +116,69 @@ export default function HomeScreen({ navigation, route }: any) {
               style={styles.detailButton}
               onPress={() => navigation.navigate('Chat')}
           >
-            <Text style={styles.detailButtonText}>상세 보기 &gt;</Text>
+            <Text style={styles.detailButtonText}> 상세 보기  &gt;</Text>
           </TouchableOpacity>
         </View>
 
-        {/* 오늘 추천 섹션 */}
-        <Text style={styles.sectionTitle}>오늘 추천</Text>
-        <View style={styles.recommendContainer}>
-          <View style={styles.recommendRow}>
-            <View style={styles.recommendLeft}>
-              <View style={styles.recommendIconBg}>
-                <Text style={{ fontSize: 18 }}>🍲</Text>
+        {/* 🪙 [핵심] iM 보증금 토큰 지갑 섹션 (터치 시 화면 이동) */}
+        <Text style={styles.sectionTitle}>디지털 토큰 자산</Text>
+        <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.walletCard}
+            onPress={() => navigation.navigate('DepositDetail')} // 상세 리스트 화면으로 진입
+        >
+          <View style={styles.walletHeader}>
+            <View style={styles.walletTitleRow}>
+              <View style={styles.tokenIconCircle}>
+                <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
               </View>
-              <Text style={styles.recommendItemText}>점심 9,000원 이하</Text>
-            </View>
-            <View style={[styles.badge, styles.badgeRecommendation]}><Text style={styles.badgeRecText}>추천</Text></View>
-          </View>
-
-          <View style={styles.recommendRow}>
-            <View style={styles.recommendLeft}>
-              <View style={styles.recommendIconBg}>
-                <Text style={{ fontSize: 18 }}>☕</Text>
-              </View>
-              <Text style={styles.recommendItemText}>커피는 1잔 OK!</Text>
-            </View>
-            <View style={[styles.badge, styles.badgeRecommendation]}><Text style={styles.badgeRecText}>추천</Text></View>
-          </View>
-
-          <View style={[styles.recommendRow, { borderBottomWidth: 0, paddingBottom: 4 }]}>
-            <View style={styles.recommendLeft}>
-              <View style={styles.recommendIconBg}>
-                <Text style={{ fontSize: 18 }}>🚖</Text>
-              </View>
-              <Text style={styles.recommendItemText}>택시대신 버스 이용</Text>
-            </View>
-            <View style={[styles.badge, styles.badgeWarning]}><Text style={styles.badgeWarnText}>주의</Text></View>
-          </View>
-        </View>
-
-        {/* 내 토큰 지갑 섹션 */}
-        <View style={styles.walletHeaderRow}>
-          <Text style={styles.sectionTitle}>내 토큰 지갑</Text>
-          <TouchableOpacity onPress={() => setHasGoal(!hasGoal)}>
-            <Text style={styles.seeAllText}>전체 보기 &gt;</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.walletContainer}>
-          {/* 생활비 */}
-          <View style={styles.tokenRow}>
-            <View style={styles.tokenLeft}>
-              <View style={[styles.tokenIconBg, { backgroundColor: '#EEA243' }]} />
               <View>
-                <Text style={styles.tokenTitleText}>생활비</Text>
-                <Text style={styles.tokenSubText}>오늘 사용 가능</Text>
+                <Text style={styles.walletName}>보증금 토큰 지갑</Text>
+                <Text style={styles.walletSub}>과소비 제어 스마트 계약 락업 자산</Text>
               </View>
             </View>
-            <Text style={styles.tokenAmountText}>65,000원</Text>
+            <Ionicons name="chevron-forward" size={18} color="#004B87" />
           </View>
 
-          {/* 자유 토큰 */}
-          <View style={styles.tokenRow}>
-            <View style={styles.tokenLeft}>
-              <View style={[styles.tokenIconBg, { backgroundColor: '#4A90E2' }]} />
-              <View>
-                <Text style={styles.tokenTitleText}>자유 토큰</Text>
-                <Text style={styles.tokenSubText}>언제든 사용 가능</Text>
-              </View>
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>락업 보증금 총액</Text>
+            <Text style={styles.walletAmount}>40,000 원</Text>
+          </View>
+
+          <View style={styles.infoBadgeRow}>
+            <View style={styles.miniBadge}><Text style={styles.miniBadgeText}>스마트 리워드머니</Text></View>
+            <Text style={styles.clickGuideText}>미션 및 만기일 확인 &gt;</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 일반 예금 자산 목록 */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>예금 자산</Text>
+        <View style={styles.normalWalletContainer}>
+          <View style={styles.normalTokenRow}>
+            <View style={styles.normalLeftRow}>
+              <View style={[styles.normalDot, { backgroundColor: '#004B87' }]} />
+              <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 / 생활비</Text>
             </View>
-            <Text style={styles.tokenAmountText}>83,000원</Text>
+            <Text style={styles.normalTokenAmount}>148,000 원</Text>
           </View>
-
-          {/* GOAL 토큰 */}
-          <View style={[styles.tokenRow, { borderBottomWidth: 0, paddingBottom: 4 }]}>
-            <View style={styles.tokenLeft}>
-              <View style={[styles.tokenIconBg, { backgroundColor: '#03A28F' }]} />
-              <View>
-                <Text style={styles.tokenTitleText}>GOAL 토큰</Text>
-                <Text style={styles.tokenSubText}>제주도 여행 적립(68%)</Text>
-              </View>
-            </View>
-            <Text style={styles.tokenAmountText}>204,000원</Text>
-          </View>
-
-          {/* 토큰 조정하기 선형 디자인 버튼 */}
-          <TouchableOpacity style={styles.adjustButton}>
-            <Ionicons name="options-outline" size={16} color="#111827" style={{ marginRight: 6 }} />
-            <Text style={styles.adjustButtonText}>토큰 조정하기</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
   );
 
   return (
       <SafeAreaView style={styles.container}>
-        {/* 시안 바탕의 은은한 오로라/그라데이션 광채 배경 필터 */}
         <LinearGradient
-            colors={['#FFFFFF', '#F6FBFB', '#EFF9F8']}
+            colors={['#FFFFFF', '#F4F9F9', '#EBF5F5']}
             style={StyleSheet.absoluteFillObject}
         />
-        {/* 2. 가장자리가 스르륵 번지는 오로라 블러 원 레이어 */}
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
           <LinearGradient
-              // 안쪽에서 바깥쪽(대각선 방향)으로 가면서 자연스럽게 투명해지도록 설정
-              colors={['rgba(167, 243, 208, 0.75)', 'rgba(167, 243, 208, 0.3)', 'transparent']}
+              colors={['rgba(0, 157, 139, 0.15)', 'rgba(0, 157, 139, 0.03)', 'transparent']}
               start={{ x: 0, y: 0 }}
               end={{ x: 0.1, y: 0.1 }}
               style={styles.hugeGlowCircle}
           />
         </View>
-        {/* 조건부 렌더링 스위치 로직 적용 */}
         {hasGoal ? renderActiveState() : renderEmptyState()}
       </SafeAreaView>
   );
@@ -246,23 +192,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logo: {
-    color: "#151b1e",
+    color: "#111827",
     fontSize: 16,
     fontWeight: "800",
-    letterSpacing: 0,
+    letterSpacing: -0.3,
   },
-  logoDot: { color: "#009d8b" },
-  logoAccent: { color: "#009d8b" },
-  // 목표가 없을 때 (Empty State) 스타일 시트
+  logoDot: { color: "#009D8B" },
+  logoAccent: { color: "#004B87", fontWeight: '900' },
+
   emptyContainer: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
   emptyHeader: { marginBottom: -160 },
   emptyCenter: { flex: 0.8, justifyContent: 'center', alignItems: 'center', width: '100%' },
 
   emptyCharacterWrapper: {
     width: '100%',
-    alignItems: 'flex-start', // 왼쪽 정렬
-    paddingLeft: 20,          // 미세 마진 레이아웃
-    marginBottom: -40,        // 카드와의 긴장감 있는 레이어 겹침 효과
+    alignItems: 'flex-start',
+    paddingLeft: 20,
+    marginBottom: -40,
     zIndex: 10,
   },
   emptyCharacterImage: { width: 160, height: 160, resizeMode: 'contain', opacity: 1 },
@@ -284,71 +230,69 @@ const styles = StyleSheet.create({
   },
   emptyMainText: { fontSize: 19, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
   emptySubText: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22, marginBottom: 26, fontWeight: '500' },
-  emptyAddButton: { flexDirection: 'row', backgroundColor: '#03A28F', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 16, alignItems: 'center', shadowColor: '#03A28F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3 },
+  emptyAddButton: { flexDirection: 'row', backgroundColor: '#009D8B', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 16, alignItems: 'center', shadowColor: '#009D8B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3 },
   emptyAddButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 
-  // 🏝️ 목표 설정 완료 시 (Active State 시안 매칭) 스타일 시트
   scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  welcomeText: { fontSize: 26, fontWeight: 'bold', color: '#000000', letterSpacing: -0.5 },
-  subWelcomeText: { fontSize: 14, color: '#111827', marginTop: 5, fontWeight: '700' },
+  welcomeText: { fontSize: 24, fontWeight: '700', color: '#111827', letterSpacing: -0.5 },
+  subWelcomeText: { fontSize: 13, color: '#4B5563', marginTop: 4, fontWeight: '500' },
   notiButton: { padding: 4 },
   characterSection: { alignItems: 'flex-start', marginBottom: 12, width: '100%' },
-  speechBubble: { backgroundColor: '#C1F2E8', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, alignSelf: 'flex-start',
-    position: 'relative',
-    marginLeft: 15, },
-  speechText: { color: '#000000', fontSize: 15, fontFamily: 'IM_Hyemin-Bold', fontWeight: 'bold', textAlign: 'left', lineHeight: 22 },
-  speechTriangle: { position: 'absolute', bottom: -8, left: 35, width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C1F2E8' },
-  characterRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, marginTop: -20 },
-  avatarImage: { width: 160, height: 150, resizeMode: 'contain',zIndex: 10},
-  islandImage: { width: 100, height: 100, resizeMode: 'contain'},
-  islandContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingBottom: 10},
-  goalCard: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 24, borderWidth: 1, borderColor: '#F3F4F6', shadowColor: '#000000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 4, marginBottom: 30 , marginTop : -40 },
-  goalTitle: { fontSize: 18, fontWeight: 'bold', color: '#000000', textAlign: 'center', marginBottom: 14 },
+  speechBubble: { backgroundColor: '#E6F6F4', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start', position: 'relative', marginLeft: 15, borderWidth: 1, borderColor: '#B3E5E0' },
+  speechText: { color: '#004B87', fontSize: 13, fontWeight: '600', textAlign: 'left', lineHeight: 18 },
+  speechTriangle: { position: 'absolute', bottom: -7, left: 24, width: 0, height: 0, borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#E6F6F4' },
+  characterRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, marginTop: -15 },
+  avatarImage: { width: 150, height: 140, resizeMode: 'contain', zIndex: 10 },
+  islandImage: { width: 95, height: 95, resizeMode: 'contain' },
+  islandContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingBottom: 10 },
+
+  goalCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24, marginTop : -35 },
+  goalTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
   goalInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalDetails: { flex: 1 },
-  detailLabelText: { fontSize: 13, color: '#6B7280', fontWeight: 'bold' },
-  detailAmountText: { fontSize: 14, color: '#111827', fontWeight: 'bold', lineHeight: 20 },
-  mintHighlightText: { color: '#03A28F', fontWeight: '900' },
-  pinkHighlightText: { color: '#FF5E62', fontWeight: '900' },
-  percentContainer: { justifyContent: 'center', alignItems: 'center', paddingLeft: 5 },
-  percentText: { fontSize: 54, fontWeight: '900', color: '#03A28F', letterSpacing: -1, textShadowColor: 'rgba(3, 162, 143, 0.15)', textShadowOffset: { width: 1, height: 3 }, shadowRadius: 4 },
-  progressBarBackground: { height: 12, backgroundColor: '#E5E7EB', borderRadius: 6, overflow: 'hidden', marginTop: 18, marginBottom: 14 },
-  progressBarFill: { height: '100%', backgroundColor: '#03A28F', borderRadius: 6 },
-  detailButton: { alignItems: 'center', paddingVertical: 4 },
-  detailButtonText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
-  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: '#000000', marginBottom: 12, marginTop: 4 },
-  recommendContainer: { backgroundColor: '#EFF9F7', borderRadius: 28, paddingHorizontal: 18, paddingVertical: 8, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(3, 162, 143, 0.05)' },
-  recommendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.03)' },
-  recommendLeft: { flexDirection: 'row', alignItems: 'center' },
-  recommendIconBg: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginRight: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 3 },
-  recommendItemText: { fontSize: 14, fontWeight: 'bold', color: '#111827' },
-  badge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
-  badgeRecommendation: { backgroundColor: '#BFDBFE' },
-  badgeWarning: { backgroundColor: '#FDE68A' },
-  badgeRecText: { fontSize: 11, fontWeight: 'bold', color: '#2563EB' },
-  badgeWarnText: { fontSize: 11, fontWeight: 'bold', color: '#D97706' },
-  walletHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  seeAllText: { fontSize: 12, color: '#000000', fontWeight: 'bold' },
-  walletContainer: { backgroundColor: '#FFFFFF', borderRadius: 28, paddingHorizontal: 20, paddingVertical: 6, borderWidth: 1, borderColor: '#F3F4F6', shadowColor: '#000000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 12, elevation: 2 },
-  tokenRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  tokenLeft: { flexDirection: 'row', alignItems: 'center' },
-  tokenIconBg: { width: 38, height: 38, borderRadius: 19, marginRight: 12 },
-  tokenTitleText: { fontSize: 14, fontWeight: 'bold', color: '#000000' },
-  tokenSubText: { fontSize: 11, color: '#9CA3AF', marginTop: 3, fontWeight: '700' },
-  tokenAmountText: { fontSize: 14, fontWeight: 'bold', color: '#000000' },
-  adjustButton: { flexDirection: 'row', height: 44, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginTop: 10, marginBottom: 14 },
-  adjustButtonText: { fontSize: 13, fontWeight: 'bold', color: '#111827' },
-  addGoalFloatingButton: { position: 'absolute', bottom: 10, right: 10, width: 56, height: 56, borderRadius: 28, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 5 },
+  detailLabelText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  detailAmountText: { fontSize: 14, color: '#111827', fontWeight: '600' },
+  mintHighlightText: { color: '#009D8B', fontWeight: '700' },
+  pinkHighlightText: { color: '#FF5E62', fontWeight: '700' },
+  percentContainer: { justifyContent: 'center', alignItems: 'center' },
+  percentText: { fontSize: 50,  fontFamily: 'IM_Hyemin-Bold', color: '#009D8B', letterSpacing: -1 },
+  progressBarBackground: { height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginTop: 14, marginBottom: 12 },
+  progressBarFill: { height: '100%', backgroundColor: '#009D8B', borderRadius: 4 },
+  detailButton: { alignItems: 'center', paddingVertical: 2 },
+  detailButtonText: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
 
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12, marginTop: 4, letterSpacing: -0.3 },
+
+  // 🪙 보증금 토큰 지갑 스타일링 변경
+  walletCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, borderWidth: 1.5, borderColor: '#009D8B', shadowColor: '#009D8B', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
+  walletHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12 },
+  walletTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  tokenIconCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#009D8B', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  walletName: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  walletSub: { fontSize: 11, color: '#6B7280', marginTop: 2, fontWeight: '400' },
+  amountRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 },
+  amountLabel: { fontSize: 13, fontWeight: '500', color: '#4B5563' },
+  walletAmount: { fontSize: 24, fontWeight: '800', color: '#004B87' },
+  infoBadgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+  miniBadge: { backgroundColor: '#E6F6F4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  miniBadgeText: { fontSize: 11, fontWeight: '700', color: '#009D8B' },
+  clickGuideText: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
+
+  normalWalletContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  normalTokenRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  normalLeftRow: { flexDirection: 'row', alignItems: 'center' },
+  normalDot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
+  normalTokenTitle: { fontSize: 13, fontWeight: '600', color: '#4B5563' },
+  normalTokenAmount: { fontSize: 14, fontWeight: '700', color: '#111827' },
   hugeGlowCircle: {
     position: 'absolute',
-    width: 380,           // 화면을 큼직하게 덮을 거대한 크기
+    width: 380,
     height: 380,
     borderRadius: 190,
-    right: -100,          // 시안의 오늘 추천~내 토큰 지갑 뒷배경 우측에 걸치도록 배치
+    right: -100,
     top: 360,
-    backgroundColor: '#C7F5F1', // 아이엠 감성의 화사한 민트빛 오로라 광채
-    opacity: 0.6,        // 은은하게 배경에 스며들도록 투명도 조절
+    backgroundColor: '#C7F5F1',
+    opacity: 0.3,
   }
 });
