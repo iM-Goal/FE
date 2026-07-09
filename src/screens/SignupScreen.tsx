@@ -17,7 +17,7 @@ export default function SignupScreen({ navigation }: any) {
 
         try {
             // 명세서에 적힌 Base URL과 엔드포인트 세팅
-            const response = await fetch('http://localhost:8080/auth/signup', {
+            const response = await fetch('http://localhost:8080/api/auth/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -32,7 +32,12 @@ export default function SignupScreen({ navigation }: any) {
             const result = await response.json();
 
             if (response.status === 201) {
-                Alert.alert('성공', `${result.nickname}님, 회원가입이 완료되었습니다!`);
+                Alert.alert('성공', `${result.nickname}님, 회원가입이 완료되었습니다!`,[
+                    {
+                        text : '확인',
+                        onPress: () => navigation.navigate('Login')
+                    }
+                    ]);
                 // TODO: 로그인 화면으로 이동하는 로직이 여기에 들어갑니다.
             } else {
                 // 명세서 부록에 정의된 공통 에러 코드 핸들링
@@ -63,7 +68,10 @@ export default function SignupScreen({ navigation }: any) {
                 <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
                     {/* 상단 뒤로가기 헤더 */}
                     <View style={styles.header}>
-                        <TouchableOpacity style={styles.backButton}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => navigation.goBack()}
+                        >
                             <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
                         </TouchableOpacity>
                     </View>

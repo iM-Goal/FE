@@ -46,7 +46,7 @@ const slides = [
 const BASE_SCREEN_HEIGHT = 812;
 const BASE_SCREEN_WIDTH = 390;
 
-export default function HomeScreen({ navigation }: any) {
+export default function SearchGoalScreen({ navigation }: any) {
   const { width, height } = useWindowDimensions();
   const [activeSlide, setActiveSlide] = useState(0);
   const dotAnimations = useRef(

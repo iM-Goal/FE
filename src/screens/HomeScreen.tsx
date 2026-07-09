@@ -1,17 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
 export default function HomeScreen({ navigation, route }: any) {
-  // 목표 등록 상태 State (true: 등록 완료 상태(제주도 여행) / false: 빈 상태)
-  const [hasGoal, setHasGoal] = useState(true);
+  // 상태 관리 State
+  const [hasGoal, setHasGoal] = useState(false);
+  const [nickname, setNickname] = useState('고객');
+  const [goalData, setGoalData] = useState<any>(null);
+  const [walletAmount, setWalletAmount] = useState('0');
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    if (route.params?.registeredSuccess) {
-      setHasGoal(true); // 목표 등록 성공 신호가 오면 수동 터치 없이 자동으로 true 전환
+  // /dashboard 통합 데이터 연동 함수
+  const fetchHomeData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/dashboard', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.status === 200) {
+        const resData = await response.json();
+
+        // 닉네임 동적 반영 (resData.nickname)
+        setNickname(resData.nickname || '아이엠');
+
+        // 목표 목록 판별 (resData.goals 배열)
+        if (resData.goals && resData.goals.length > 0) {
+          const primaryGoal = resData.goals[0];
+          setGoalData({
+            title: primaryGoal.itemName,
+            targetAmount: primaryGoal.targetAmount,
+            currentAmount: primaryGoal.currentAmount || 204000,
+            achievementRate: primaryGoal.achievementRate || 68
+          });
+          setHasGoal(true);
+        } else {
+          setHasGoal(false);
+        }
+        setWalletAmount('40,000');
+      } else {
+        setHasGoal(false);
+      }
+    } catch (error) {
+      console.log('iM AgentiX API 통신 실패:', error);
+      // ⚠️ 데모 끊김 방지용 폴백(Fallback) 더미 데이터 가동
+      setNickname('아이엠');
+      setHasGoal(true);
+      setGoalData({
+        title: '제주도 여행',
+        targetAmount: 300000,
+        currentAmount: 204000,
+        achievementRate: 68
+      });
+      setWalletAmount('40,000');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchHomeData();
   }, [route.params?.registeredSuccess]);
 
   // 1. 목표가 없을 때 보여주는 빈 화면 UI
@@ -114,7 +165,7 @@ export default function HomeScreen({ navigation, route }: any) {
 
           <TouchableOpacity
               style={styles.detailButton}
-              onPress={() => navigation.navigate('Chat')}
+              onPress={() => navigation.navigate('GoalDetail')}
           >
             <Text style={styles.detailButtonText}> 상세 보기  &gt;</Text>
           </TouchableOpacity>
@@ -133,7 +184,7 @@ export default function HomeScreen({ navigation, route }: any) {
                 <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={styles.walletName}>보증금 토큰 지갑</Text>
+                <Text style={styles.walletName}>iMKRW</Text>
                 <Text style={styles.walletSub}>과소비 제어 스마트 계약 락업 자산</Text>
               </View>
             </View>

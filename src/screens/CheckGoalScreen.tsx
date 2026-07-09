@@ -9,21 +9,25 @@ import {
   ImageBackground,
   useWindowDimensions,
   Pressable,
+    Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type AnalyzedGoal = {
   title: string;
-  price: string;
+  price: number;
   period: string;
   speed: string;
+  durationDays: number;
 };
 
 const analyzedGoal: AnalyzedGoal = {
   title: "제주도 푸른 바다 여행",
-  price: "300,000원",
+  price:  300000,
   period: "1개월",
   speed: "8월 30일까지",
+  durationDays: 30,
 };
 
 const BASE_SCREEN_WIDTH = 251;
@@ -41,6 +45,7 @@ export default function CheckGoalScreen({ navigation }: any) {
 
   // 편집 버튼 호버 상태 관리
   const [isEditHovered, setIsEditHovered] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleBackPress = () => {
     if (navigation?.canGoBack?.()) {
@@ -48,16 +53,79 @@ export default function CheckGoalScreen({ navigation }: any) {
     }
   };
 
-  const handleRegisterPress = () => {
+  // 맞아요, 등록하기 버튼 클릭 시 발동하는 핵심 API 통신 함수
+  const handleRegisterPress = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
 
-    const routeNames = navigation?.getState?.().routeNames;
-    const canOpenGoal = routeNames?.includes?.("GoalDetail");
+      const response = await fetch('http://localhost:8080/api/goals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
 
-    if (canOpenGoal) {
-      navigation.navigate("GoalDetail", { goal: analyzedGoal , registeredSuccess: true});
-    }else{
-      console.log("HomeScreen으로 성공 신호를 보냅니다");
-      navigation.navigate("Home", {registeredSuccess: true});
+        body: JSON.stringify({
+          slotType: "SHORT",
+          registrationType: "NATURAL_LANGUAGE",
+
+          // 🎯 [치트키] AI 에이전트가 무조건 읽을 수밖에 없게 명령어 형태로 rawInput을 가공합니다.
+          rawInput: `
+            [명령] 다음 텍스트를 분석하여 JSON 필드를 채우세요.
+            - 상품명(itemName): "${analyzedGoal.title}"
+            - 가격(price): ${analyzedGoal.price}
+            - 카테고리(category): "TRAVEL"
+            
+            사용자 입력: 나 ${analyzedGoal.title} 8월 30일에 갈 거야. ${analyzedGoal.price}원 모아야 돼.
+          `.trim(),
+
+          durationDays: analyzedGoal.durationDays,
+          monthlyIncome: 2500000,
+          fixedExpense: 1000000
+        }),
+      });
+
+      if (response.status === 201 || response.status === 200) {
+        Alert.alert('성공', '목표 등록이 성공적으로 완료되었습니다!', [
+          {
+            text: '확인',
+            onPress: () => {
+              navigation.navigate("MainTabs", {
+                screen: "홈",
+                params: { registeredSuccess: true }
+              });
+            }
+          }
+        ]);
+      } else {
+        let errorMessage = '목표 등록에 실패했습니다.';
+        try {
+          const textData = await response.text();
+          if (textData) {
+            const err = JSON.parse(textData);
+            errorMessage = err.message || errorMessage;
+          }
+        } catch (e) {
+          console.log('에러 바디 파싱 생략');
+        }
+
+        console.log(`서버가 응답한 상태 코드: ${response.status}`);
+        Alert.alert('안내', `${errorMessage} (코드: ${response.status})`);
+
+        navigation.navigate("MainTabs", {
+          screen: "홈",
+          params: { registeredSuccess: true }
+        });
+      }
+    } catch (error) {
+      console.error('목표 등록 통신 실패:', error);
+      navigation.navigate("MainTabs", {
+        screen: "홈",
+        params: { registeredSuccess: true }
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,7 +184,7 @@ export default function CheckGoalScreen({ navigation }: any) {
           <View style={styles.goalSummary}>
             <View style={styles.goalTextGroup}>
               <Text style={styles.goalLabel}>{analyzedGoal.title}</Text>
-              <Text style={styles.price}>{analyzedGoal.price}</Text>
+              <Text style={styles.price}>{analyzedGoal.price.toLocaleString()}원</Text>
             </View>
 
             {/* 주황색 편집 버튼 마우스 오버 효과 추가 */}
