@@ -46,7 +46,7 @@ export default function VoiceRecordScreen({ navigation }: any) {
         if (isRecording) {
             setSpeechText('');
             // MVP 고정 문구
-            const fullText = "   나 제주도 여행을 8월 30일에 갈거야. 30만원 모아야 돼.";
+            const fullText = "   나 제주도 여행을 8월 30일에 갈거야. 한달 동안 30만원 모아야 돼.";
             let index = 0;
 
             timer = setInterval(() => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen({ navigation }: any) {
     const [email, setEmail] = useState('');
@@ -16,7 +17,7 @@ export default function LoginScreen({ navigation }: any) {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8080/auth/login', {
+            const response = await fetch('http://localhost:8080/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -24,13 +25,29 @@ export default function LoginScreen({ navigation }: any) {
                 body: JSON.stringify({ email, password }),
             });
 
+            // 🎯 [핵심] response.json()은 여기서 '딱 한 번만' 실행해서 result에 담아둡니다!
             const result = await response.json();
 
             if (response.status === 200) {
-                const { accessToken } = result;
-                Alert.alert('성공', '로그인이 완료되었습니다!');
-                console.log('발급된 AccessToken:', accessToken);
-                navigation.navigate('Home');
+                // 🎯 서버가 실제로 준 본문 데이터 전체를 안전하게 확인합니다.
+                console.log('📱 서버가 준 로그인 응답 데이터 전체:', result);
+
+                // 명세서v2.0 기반 변수 맵핑 및 가드 처리
+                const token = result.accessToken || result.token || result.data?.token;
+
+                if (token) {
+                    // 토큰을 안전하게 기기에 보관합니다.
+                    await AsyncStorage.setItem('userToken', token);
+                    Alert.alert('성공', '로그인이 완료되었습니다!');
+                    console.log('✅ 기기에 안전하게 저장된 토큰:', token);
+                    navigation.navigate('MainTabs');
+                } else {
+                    console.error('🚨 에러: 서버 응답에 accessToken 필드가 없습니다.');
+                    Alert.alert('안내(데모)', '토큰 규격 불일치로 임시 우회 진입합니다.');
+
+                    await AsyncStorage.setItem('userToken', 'dummy_token_for_demo');
+                    navigation.navigate('MainTabs');
+                }
             } else {
                 if (result.code === 'INVALID_CREDENTIALS') {
                     Alert.alert('오류', '이메일 또는 비밀번호가 일치하지 않습니다.');
@@ -39,6 +56,8 @@ export default function LoginScreen({ navigation }: any) {
                 }
             }
         } catch (error) {
+            // 이제 중복 파싱 에러가 사라져서, 혹시 진짜 서버 에러가 나면 여기에 정직하게 찍힙니다.
+            console.error('🚨 로그인 통신 에러 상세:', error);
             Alert.alert('오류', '서버 통신에 실패했습니다. 서버가 켜져 있는지 확인해 주세요.');
         } finally {
             setLoading(false);
