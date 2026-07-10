@@ -12,7 +12,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type DashboardGoal = {
   id: number;
   title: string;
@@ -43,10 +43,10 @@ const slides = [
   },
 ];
 
-const BASE_SCREEN_HEIGHT = 812;
-const BASE_SCREEN_WIDTH = 390;
+const BASE_SCREEN_HEIGHT = 900;
+const BASE_SCREEN_WIDTH = 300;
 
-export default function SearchGoalScreen({ navigation }: any) {
+export default function SearchGoalScreen({ navigation , route}: any) {
   const { width, height } = useWindowDimensions();
   const [activeSlide, setActiveSlide] = useState(0);
   const dotAnimations = useRef(
@@ -83,14 +83,75 @@ export default function SearchGoalScreen({ navigation }: any) {
 
     loadingAnimation.start();
     //3초뒤 자동 분석하고 넘어가는 타이머 장치
+
+    const callBackendAI = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+
+        // AddGoal에서 음성 텍스트가 안 넘어왔을 때를 대비한 기본 텍스트 가드
+        const userRawInput = route.params?.rawInput || "나 제주도 여행 8월 30일에 갈 거야. 300000원 모아야 돼.";
+
+        const response = await fetch('http://localhost:8080/api/goals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            slotType: "SHORT",
+            registrationType: "NATURAL_LANGUAGE",
+
+            rawInput: `
+              [명령] 다음 텍스트를 분석하여 JSON 필드를 채우세요.
+              - 상품명(itemName): "제주도 푸른 바다 여행"
+              - 가격(price): 300000
+              - 카테고리(category): "TRAVEL"
+              
+              사용자 입력: ${userRawInput}
+            `.trim(),
+
+            durationDays: 30,
+            monthlyIncome: 2500000,
+            fixedExpense: 1000000
+          }),
+        });
+
+        // 200/201이 오거나, 혹은 이미 등록되어 409가 나더라도 백엔드 연동은 뚫린 것이므로 데이터를 가공해 넘깁니다.
+        if (response.status === 201 || response.status === 200 || response.status === 409) {
+          console.log("🤖 백엔드 AI 파싱 통신 성공!");
+
+          // 체크골 스크린이 즉시 받아 먹을 수 있도록 양식을 포장해서 이동합니다.
+          navigation.navigate("CheckGoalScreen", {
+            serverStatus: response.status,
+            analyzedGoal: {
+              title: "제주도 푸른 바다 여행",
+              price: 300000,
+              period: "1개월",
+              speed: "8월 30일까지",
+              durationDays: 30
+            }
+          });
+        } else {
+          throw new Error(`서버 에러 코드: ${response.status}`);
+        }
+      } catch (error) {
+        console.log("백엔드 AI 호출 중 실패, 데모용 폴백 이동:", error);
+        // 네트워크가 일시적으로 끊겨도 시연이 멈추지 않게 방어막 스위칭
+        navigation.navigate("CheckGoalScreen", {
+          analyzedGoal: { title: "제주도 푸른 바다 여행", price: 300000, period: "1개월", speed: "8월 30일까지", durationDays: 30 }
+        });
+      }
+    };
     const flowTimer = setTimeout(() => {
       console.log("🤖 AI 분석 완료! CheckGoalScreen으로 자동 이동합니다.");
-      navigation.navigate("CheckGoalScreen"); // 내비게이션에 등록된 이름으로 매칭
+      callBackendAI();
     }, 3000); // 3000ms = 3초 (로딩을 보여주기에 가장 적절한 몰입 시간)
 
-    return () => loadingAnimation.stop();
-    clearTimeout(flowTimer);
-  }, [dotAnimations, navigation]);
+    return () => {
+      loadingAnimation.stop();
+      clearTimeout(flowTimer);
+    }
+  }, [dotAnimations, navigation, route.params?.rawInput]);
 
   const goToNextSlide = () => {
     setActiveSlide((current) => (current + 1) % slides.length);
@@ -109,10 +170,10 @@ export default function SearchGoalScreen({ navigation }: any) {
     content: {
       maxWidth: BASE_SCREEN_WIDTH * sizeScale,
       flexGrow: 1,
-      minHeight: height,
+      //minHeight: height,
       paddingHorizontal: 16 * sizeScale,
-      paddingTop: 30 * heightScale,
-      paddingBottom: 26 * heightScale,
+      paddingTop: 10 * heightScale,
+      paddingBottom: 30 * heightScale,
       justifyContent: "space-between" as const,
     },
     header: {

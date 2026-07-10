@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpaci
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation, route }: any) {
   // 상태 관리 State
@@ -12,54 +13,81 @@ export default function HomeScreen({ navigation, route }: any) {
   const [walletAmount, setWalletAmount] = useState('0');
   const [loading, setLoading] = useState(true);
 
-  // /dashboard 통합 데이터 연동 함수
+  // /dashboard 통합 데이터 연동 함수 교정본
   const fetchHomeData = async () => {
     setLoading(true);
     try {
+      const token = await AsyncStorage.getItem('userToken');
       const response = await fetch('http://localhost:8080/api/dashboard', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
       });
 
       if (response.status === 200) {
         const resData = await response.json();
 
-        // 닉네임 동적 반영 (resData.nickname)
-        setNickname(resData.nickname || '아이엠');
+        // 백엔드 실제 구조인 resData.data 진입
+        const dashboardData = resData.data;
 
-        // 목표 목록 판별 (resData.goals 배열)
-        if (resData.goals && resData.goals.length > 0) {
-          const primaryGoal = resData.goals[0];
+        // 파라미터 검사를 하되, 백엔드 실제 카운트를 최우선으로 검사 -> 목표가 있는지 없는지 확인
+        if ((dashboardData && dashboardData.activeGoalCount > 0) || route.params?.registeredSuccess) {
+          setNickname('아이엠'); // 닉네임 필드가 대시보드에 없다면 일단 수동 지정
+
+          //UI에 그릴 목표 카드를 세팅
           setGoalData({
-            title: primaryGoal.itemName,
-            targetAmount: primaryGoal.targetAmount,
-            currentAmount: primaryGoal.currentAmount || 204000,
-            achievementRate: primaryGoal.achievementRate || 68
+            title: '제주도 푸른 바다 여행', // 상세 정보는 기획 dummy 매핑
+            targetAmount: 300000,
+            currentAmount: dashboardData.totalSavedAmount || 35000, // 백엔드가 준 저축 총액 연동!
+            achievementRate: dashboardData.todayMissionAchievementRate || 12 // 달성률 연동
           });
+
           setHasGoal(true);
+          // 이렇게 해야 로그아웃하고 새 계정으로 들어올 때 빈 화면으로 시작합니다.
+          if (route.params?.registeredSuccess) {
+            navigation.setParams({registeredSuccess: undefined});
+          }
+
         } else {
           setHasGoal(false);
         }
         setWalletAmount('40,000');
       } else {
+        // 200이 아닐 때도 데모 흐름을 위해 가드 처리 가능
         setHasGoal(false);
       }
     } catch (error) {
-      console.log('iM AgentiX API 통신 실패:', error);
-      // ⚠️ 데모 끊김 방지용 폴백(Fallback) 더미 데이터 가동
-      setNickname('아이엠');
-      setHasGoal(true);
-      setGoalData({
-        title: '제주도 여행',
-        targetAmount: 300000,
-        currentAmount: 204000,
-        achievementRate: 68
-      });
-      setWalletAmount('40,000');
+      console.log('iM AgentiX API 통신 실패 (네트워크/서버 다운):', error);
+
+      // 서버가 꺼져있더라도, 방금 막 등록을 성공하고 넘어온 상태(true)일 때만 목표 화면
+      if (route.params?.registeredSuccess) {
+        console.log("💡 서버는 터졌지만 등록 성공 마크가 있으므로 목표 활성화 화면(폴백)을 켭니다.");
+
+        setNickname('아이엠');
+        setHasGoal(true);
+        setGoalData({
+          title: '제주도 푸른 바다 여행',
+          targetAmount: 300000,
+          currentAmount: 35000,
+          achievementRate: 12
+        });
+        setWalletAmount('40,000');
+
+        // 화면을 한 번 띄웠으니 파라미터 잔상을 즉시 날려버립니다
+        navigation.setParams({registeredSuccess: undefined});
+
+      } else {
+        // 등록 성공 파라미터가 없다면, 통신이 실패했을 때 무조건 "목표가 없는 빈 화면"을 보여줍니다.
+        console.log("💡 일반 진입 중 통신 실패이므로 빈 대시보드 화면을 유지합니다.");
+        setHasGoal(false);
+      }
+
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     fetchHomeData();
@@ -102,119 +130,131 @@ export default function HomeScreen({ navigation, route }: any) {
   );
 
   // 2. 목표가 생겼을 때 보여주는 활성화 화면 UI
-  const renderActiveState = () => (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+  const renderActiveState = () => {
+    // 🎯 안전한 데이터 출력을 위해 널(Null) 가드 및 기본값 분크 처리
+    const title = goalData?.title || '나의 저축 목표';
+    const targetAmount = goalData?.targetAmount || 0;
+    const currentAmount = goalData?.currentAmount || 0;
+    const achievementRate = goalData?.achievementRate || 0;
+    const remainingAmount = targetAmount - currentAmount > 0 ? targetAmount - currentAmount : 0;
 
-        <View style={[styles.logoHeader, { paddingHorizontal: 0, marginBottom: 16 }]}>
-          <Text style={styles.logo}>
-            <Text style={styles.logoDot}>iM</Text> Bank <Text style={styles.logoAccent}>AgentiX</Text>
-          </Text>
-        </View>
+    // 🎯 숫자에 3자리마다 콤마(,)를 찍어주는 포맷터 함수
+    const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-        {/* 상단 웰컴 헤더 */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.welcomeText}>아이엠님 👋</Text>
-            <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
+    return (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+          <View style={[styles.logoHeader, { paddingHorizontal: 0, marginBottom: 16 }]}>
+            <Text style={styles.logo}>
+              <Text style={styles.logoDot}>iM</Text> Bank <Text style={styles.logoAccent}>AgentiX</Text>
+            </Text>
           </View>
-          <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('ChatScreen')}>
-            <Ionicons name="notifications-outline" size={30} color="#004B87" />
-          </TouchableOpacity>
-        </View>
 
-        {/* 상단 민트색 캐릭터 말풍선 가이드 */}
-        <View style={styles.characterSection}>
-          <View style={styles.speechBubble}>
-            <Text style={styles.speechText}>현재 페이스를 아주 잘 유지하고 있어요! 🎉</Text>
-            <Text style={[styles.speechText, { marginTop: 2 }]}>이대로 목표 금액까지 함께 달려가요.</Text>
-            <View style={styles.speechTriangle} />
+          {/* 상단 웰컴 헤더 */}
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.welcomeText}>{nickname}님 👋</Text>
+              <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
+            </View>
+            <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('ChatScreen')}>
+              <Ionicons name="notifications-outline" size={30} color="#004B87" />
+            </TouchableOpacity>
           </View>
-          <View style={styles.characterRow}>
-            <Image source={require('../../assets/main_blue.png')} style={styles.avatarImage} />
-            <View style={styles.islandContainer}>
-              <Image source={require('../../assets/palm.png')} style={styles.islandImage} />
+
+          {/* 상단 민트색 캐릭터 말풍선 가이드 */}
+          <View style={styles.characterSection}>
+            <View style={styles.speechBubble}>
+              <Text style={styles.speechText}>현재 페이스를 아주 잘 유지하고 있어요! 🎉</Text>
+              <Text style={[styles.speechText, { marginTop: 2 }]}>이대로 목표 금액까지 함께 달려가요.</Text>
+              <View style={styles.speechTriangle} />
+            </View>
+            <View style={styles.characterRow}>
+              <Image source={require('../../assets/main_blue.png')} style={styles.avatarImage} />
+              <View style={styles.islandContainer}>
+                <Image source={require('../../assets/palm.png')} style={styles.islandImage} />
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* 제주도 여행 목표 달성 카드 */}
-        <View style={styles.goalCard}>
-          <Text style={styles.goalTitle}>제주도 여행</Text>
+          {/* 🎯 동적 데이터가 주입되는 목표 달성 카드 섹션 */}
+          <View style={styles.goalCard}>
+            <Text style={styles.goalTitle}>{title}</Text>
 
-          {/* 제주도 여행 목표 달성 카드 */}
             <View style={styles.goalInfoRow}>
               <View style={styles.goalDetails}>
-                <Text style={styles.detailLabelText}>목표 금액 : 300,000원</Text>
+                <Text style={styles.detailLabelText}>목표 금액 : {formatNumber(targetAmount)}원</Text>
                 <Text style={[styles.detailAmountText, { marginTop: 14 }]}>
-                  <Text style={styles.mintHighlightText}>204,000원</Text> 모았어요
+                  <Text style={styles.mintHighlightText}>{formatNumber(currentAmount)}원</Text> 남았어요
                 </Text>
                 <Text style={styles.detailAmountText}>
-                  <Text style={styles.pinkHighlightText}>96,000원</Text> 남았어요
+                  <Text style={styles.pinkHighlightText}>{formatNumber(remainingAmount)}원</Text> 남았어요
                 </Text>
               </View>
 
-
               <View style={styles.percentContainer}>
-              <Text style={styles.percentText}>68%</Text>
+                {/* 🎯 하드코딩 '68%' 제거 후 실제 달성률 연동 */}
+                <Text style={styles.percentText}>{achievementRate}%</Text>
+              </View>
             </View>
+
+            <View style={styles.progressBarBackground}>
+              {/* 🎯 하드코딩 '68%' 제거 후 게이지 바 스타일 폭 동적 반영 */}
+              <View style={[styles.progressBarFill, { width: `${achievementRate}%` }]} />
+            </View>
+
+            <TouchableOpacity
+                style={styles.detailButton}
+                onPress={() => navigation.navigate('GoalDetail')}
+            >
+              <Text style={styles.detailButtonText}> 상세 보기  &gt;</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarFill, { width: '68%' }]} />
-          </View>
-
+          {/* 🪙 iM 보증금 토큰 지갑 섹션 */}
+          <Text style={styles.sectionTitle}>디지털 토큰 자산</Text>
           <TouchableOpacity
-              style={styles.detailButton}
-              onPress={() => navigation.navigate('GoalDetail')}
+              activeOpacity={0.9}
+              style={styles.walletCard}
+              onPress={() => navigation.navigate('DepositDetail')}
           >
-            <Text style={styles.detailButtonText}> 상세 보기  &gt;</Text>
+            <View style={styles.walletHeader}>
+              <View style={styles.walletTitleRow}>
+                <View style={styles.tokenIconCircle}>
+                  <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.walletName}>iMKRW</Text>
+                  <Text style={styles.walletSub}>과소비 제어 스마트 계약 락업 자산</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#004B87" />
+            </View>
+
+            <View style={styles.amountRow}>
+              <Text style={styles.amountLabel}>락업 보증금 총액</Text>
+              <Text style={styles.walletAmount}>{walletAmount} 원</Text>
+            </View>
+
+            <View style={styles.infoBadgeRow}>
+              <View style={styles.miniBadge}><Text style={styles.miniBadgeText}>스마트 리워드머니</Text></View>
+              <Text style={styles.clickGuideText}>미션 및 만기일 확인 &gt;</Text>
+            </View>
           </TouchableOpacity>
-        </View>
 
-        {/* 🪙 [핵심] iM 보증금 토큰 지갑 섹션 (터치 시 화면 이동) */}
-        <Text style={styles.sectionTitle}>디지털 토큰 자산</Text>
-        <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.walletCard}
-            onPress={() => navigation.navigate('DepositDetail')} // 상세 리스트 화면으로 진입
-        >
-          <View style={styles.walletHeader}>
-            <View style={styles.walletTitleRow}>
-              <View style={styles.tokenIconCircle}>
-                <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
+          {/* 일반 예금 자산 목록 */}
+          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>예금 자산</Text>
+          <View style={styles.normalWalletContainer}>
+            <View style={styles.normalTokenRow}>
+              <View style={styles.normalLeftRow}>
+                <View style={[styles.normalDot, { backgroundColor: '#004B87' }]} />
+                <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 / 생활비</Text>
               </View>
-              <View>
-                <Text style={styles.walletName}>iMKRW</Text>
-                <Text style={styles.walletSub}>과소비 제어 스마트 계약 락업 자산</Text>
-              </View>
+              <Text style={styles.normalTokenAmount}>148,000 원</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#004B87" />
           </View>
-
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>락업 보증금 총액</Text>
-            <Text style={styles.walletAmount}>40,000 원</Text>
-          </View>
-
-          <View style={styles.infoBadgeRow}>
-            <View style={styles.miniBadge}><Text style={styles.miniBadgeText}>스마트 리워드머니</Text></View>
-            <Text style={styles.clickGuideText}>미션 및 만기일 확인 &gt;</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* 일반 예금 자산 목록 */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>예금 자산</Text>
-        <View style={styles.normalWalletContainer}>
-          <View style={styles.normalTokenRow}>
-            <View style={styles.normalLeftRow}>
-              <View style={[styles.normalDot, { backgroundColor: '#004B87' }]} />
-              <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 / 생활비</Text>
-            </View>
-            <Text style={styles.normalTokenAmount}>148,000 원</Text>
-          </View>
-        </View>
-      </ScrollView>
-  );
+        </ScrollView>
+    );
+  };
 
   return (
       <SafeAreaView style={styles.container}>
