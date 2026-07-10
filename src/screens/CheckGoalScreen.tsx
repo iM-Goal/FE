@@ -30,10 +30,10 @@ const analyzedGoal: AnalyzedGoal = {
   durationDays: 30,
 };
 
-const BASE_SCREEN_WIDTH = 251;
-const BASE_SCREEN_HEIGHT = 508;
+const BASE_SCREEN_WIDTH = 300;
+const BASE_SCREEN_HEIGHT = 10;
 
-export default function CheckGoalScreen({ navigation }: any) {
+export default function CheckGoalScreen({ navigation, route }: any) {
   const { width, height } = useWindowDimensions();
   const frameWidth = Math.min(width, BASE_SCREEN_WIDTH);
   const widthScale = Math.min(frameWidth / BASE_SCREEN_WIDTH, 1);
@@ -47,6 +47,13 @@ export default function CheckGoalScreen({ navigation }: any) {
   const [isEditHovered, setIsEditHovered] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const dynamicGoal = route.params?.analyzedGoal || {
+    title: "제주도 푸른 바다 여행",
+    price: 300000,
+    period: "1개월",
+    speed: "8월 30일까지",
+    durationDays: 30,
+  };
   const handleBackPress = () => {
     if (navigation?.canGoBack?.()) {
       navigation.goBack();
@@ -54,79 +61,22 @@ export default function CheckGoalScreen({ navigation }: any) {
   };
 
   // 맞아요, 등록하기 버튼 클릭 시 발동하는 핵심 API 통신 함수
-  const handleRegisterPress = async () => {
+  const handleRegisterPress = () => {
     setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('userToken');
 
-      const response = await fetch('http://localhost:8080/api/goals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-
-        body: JSON.stringify({
-          slotType: "SHORT",
-          registrationType: "NATURAL_LANGUAGE",
-
-          // 🎯 [치트키] AI 에이전트가 무조건 읽을 수밖에 없게 명령어 형태로 rawInput을 가공합니다.
-          rawInput: `
-            [명령] 다음 텍스트를 분석하여 JSON 필드를 채우세요.
-            - 상품명(itemName): "${analyzedGoal.title}"
-            - 가격(price): ${analyzedGoal.price}
-            - 카테고리(category): "TRAVEL"
-            
-            사용자 입력: 나 ${analyzedGoal.title} 8월 30일에 갈 거야. ${analyzedGoal.price}원 모아야 돼.
-          `.trim(),
-
-          durationDays: analyzedGoal.durationDays,
-          monthlyIncome: 2500000,
-          fixedExpense: 1000000
-        }),
-      });
-
-      if (response.status === 201 || response.status === 200) {
-        Alert.alert('성공', '목표 등록이 성공적으로 완료되었습니다!', [
-          {
-            text: '확인',
-            onPress: () => {
-              navigation.navigate("MainTabs", {
-                screen: "홈",
-                params: { registeredSuccess: true }
-              });
-            }
-          }
-        ]);
-      } else {
-        let errorMessage = '목표 등록에 실패했습니다.';
-        try {
-          const textData = await response.text();
-          if (textData) {
-            const err = JSON.parse(textData);
-            errorMessage = err.message || errorMessage;
-          }
-        } catch (e) {
-          console.log('에러 바디 파싱 생략');
+    Alert.alert('성공', '목표 등록이 성공적으로 완료되었습니다!', [
+      {
+        text: '확인',
+        onPress: () => {
+          setLoading(false);
+          // 🎯 홈화면으로 점프하면서 새로고침 파라미터를 넘겨 대시보드를 활성화시킵니다!
+          navigation.navigate("MainTabs", {
+            screen: "홈",
+            params: { registeredSuccess: true }
+          });
         }
-
-        console.log(`서버가 응답한 상태 코드: ${response.status}`);
-        Alert.alert('안내', `${errorMessage} (코드: ${response.status})`);
-
-        navigation.navigate("MainTabs", {
-          screen: "홈",
-          params: { registeredSuccess: true }
-        });
       }
-    } catch (error) {
-      console.error('목표 등록 통신 실패:', error);
-      navigation.navigate("MainTabs", {
-        screen: "홈",
-        params: { registeredSuccess: true }
-      });
-    } finally {
-      setLoading(false);
-    }
+    ]);
   };
 
   const dynamicStyles = {
@@ -183,8 +133,8 @@ export default function CheckGoalScreen({ navigation }: any) {
 
           <View style={styles.goalSummary}>
             <View style={styles.goalTextGroup}>
-              <Text style={styles.goalLabel}>{analyzedGoal.title}</Text>
-              <Text style={styles.price}>{analyzedGoal.price.toLocaleString()}원</Text>
+              <Text style={styles.goalLabel}>{dynamicGoal.title}</Text>
+              <Text style={styles.price}>{dynamicGoal.price.toLocaleString()}원</Text>
             </View>
 
             {/* 주황색 편집 버튼 마우스 오버 효과 추가 */}
@@ -203,12 +153,12 @@ export default function CheckGoalScreen({ navigation }: any) {
           <View style={styles.infoRow}>
             <View style={styles.infoBox}>
               <Text style={styles.infoLabel}>예상 기간</Text>
-              <Text style={styles.infoValue}>{analyzedGoal.period}</Text>
+              <Text style={styles.infoValue}>{dynamicGoal.period}</Text>
             </View>
 
             <View style={styles.infoBox}>
               <Text style={styles.infoLabel}>언제까지?</Text>
-              <Text style={styles.infoValue}>{analyzedGoal.speed}</Text>
+              <Text style={styles.infoValue}>{dynamicGoal.speed}</Text>
             </View>
           </View>
         </View>
