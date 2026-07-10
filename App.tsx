@@ -17,6 +17,9 @@ import GoalDetailScreen from "./src/screens/GoalDetailScreen";
 import AlramChatScreen from "./src/screens/AlramChatScreen";
 import SpendAlertScreen from "./src/screens/SpendAlertScreen";
 import SuccessGoalScreen from "./src/screens/SuccessGoalScreen";
+import SpendingReport from "./src/screens/SpendingReport";
+import SpendingDate from "./src/screens/SpendingDate";
+import SpendingCategory from "./src/screens/SpendingCategory";
 
 const Stack = createNativeStackNavigator();
 
@@ -29,7 +32,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login" // 첫 시작점은 로그인 화면!
+        initialRouteName="SpendingReport" // 첫 시작점은 로그인 화면!
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: "#F8FAFC" },
@@ -49,6 +52,9 @@ export default function App() {
         <Stack.Screen name="AlramChatScreen" component={AlramChatScreen} />
         <Stack.Screen name="SpendAlertScreen" component={SpendAlertScreen} />
         <Stack.Screen name="SuccessGoalScreen" component={SuccessGoalScreen} />
+        <Stack.Screen name="SpendingReport" component={SpendingReport} />
+        <Stack.Screen name="SpendingDate" component={SpendingDate} />
+        <Stack.Screen name="SpendingCategory" component={SpendingCategory} />
       </Stack.Navigator>
     </NavigationContainer>
   );
