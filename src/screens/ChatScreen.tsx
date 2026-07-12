@@ -180,7 +180,7 @@ export default function ChatScreen({ navigation }: any) {
                     <Text style={{color: '#004B87', fontWeight: 'bold'}}>{formatNumber(mission.depositAmount)} iMKRW</Text>가 필요해요.
                   </Text>
 
-                  {/* 🎯 [수정] 수락 API가 아니라 '세부 사항 화면'으로 파라미터와 함께 넘어갑니다! */}
+
                   <TouchableOpacity
                       style={[styles.mintButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 16 }]}
                       onPress={() => navigation.navigate('MissionDetail', { mission })}
@@ -190,9 +190,10 @@ export default function ChatScreen({ navigation }: any) {
                   </TouchableOpacity>
                   <TouchableOpacity
                       style={[styles.greyButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 8 }]}
+                      onPress={() => navigation.navigate('SpendAlert', { mission })}
                       activeOpacity={0.7}
                   >
-                    <Text style={[styles.greyButtonText, { fontSize: 14 }]}>다른 미션 보기</Text>
+                    <Text style={[styles.greyButtonText, { fontSize: 14 }]}>상세보기 (기간 재조정)</Text>
                   </TouchableOpacity>
                 </View>
               </ChatBubble>
