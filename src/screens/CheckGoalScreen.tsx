@@ -61,9 +61,10 @@ export default function CheckGoalScreen({ navigation, route }: any) {
   };
 
   // 맞아요, 등록하기 버튼 클릭 시 발동하는 핵심 API 통신 함수
-  const handleRegisterPress = () => {
+  const handleRegisterPress = async () => {
     setLoading(true);
 
+    await AsyncStorage.setItem('FORCE_SHOW_GOAL', 'true');
     Alert.alert('성공', '목표 등록이 성공적으로 완료되었습니다!', [
       {
         text: '확인',
@@ -72,7 +73,7 @@ export default function CheckGoalScreen({ navigation, route }: any) {
           // 🎯 홈화면으로 점프하면서 새로고침 파라미터를 넘겨 대시보드를 활성화시킵니다!
           navigation.navigate("MainTabs", {
             screen: "홈",
-            params: { registeredSuccess: true }
+            //params: { registeredSuccess: true }
           });
         }
       }
