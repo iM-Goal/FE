@@ -20,6 +20,7 @@ import SuccessGoalScreen from "./src/screens/SuccessGoalScreen";
 import SpendingReport from "./src/screens/SpendingReport";
 import SpendingDate from "./src/screens/SpendingDate";
 import SpendingCategory from "./src/screens/SpendingCategory";
+import MissionDetail from "./src/screens/MissionDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -32,7 +33,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="SpendingReport" // 첫 시작점은 로그인 화면!
+        initialRouteName="Login" // 첫 시작점은 로그인 화면!
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: "#F8FAFC" },
@@ -41,7 +42,7 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="MainTabs" component={MainTabNavigator} />
-        <Stack.Screen name="Home" component={HomeScreen} />
+       {/* <Stack.Screen name="Home" component={HomeScreen} />*/}
         <Stack.Screen name="AddGoal" component={AddGoalScreen} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="VoiceRecord" component={VoiceRecordScreen} />
@@ -55,6 +56,7 @@ export default function App() {
         <Stack.Screen name="SpendingReport" component={SpendingReport} />
         <Stack.Screen name="SpendingDate" component={SpendingDate} />
         <Stack.Screen name="SpendingCategory" component={SpendingCategory} />
+        <Stack.Screen name="MissionDetail" component={MissionDetail} />
       </Stack.Navigator>
     </NavigationContainer>
   );

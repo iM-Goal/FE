@@ -6,20 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from './HomeScreen';
 import ChatScreen from './ChatScreen'; // 기존 실제 ChatScreen 연결
 import DepositDetailScreen from './DepositDetailScreen'; // 기존 실제 Deposit 화면 연결
-
+import SpendingReport from './SpendingReport';
 const Tab = createBottomTabNavigator();
-
-// 소비분석용 플레이스홀더 (기존 유지)
-import { View, Text } from 'react-native';
-function AnalysisScreen() {
-    return (
-        <View style={styles.placeholderContainer}>
-            <Ionicons name="bar-chart-outline" size={48} color="#009D8B" />
-            <Text style={styles.placeholderTitle}>소비 분석 리포트</Text>
-            <Text style={styles.placeholderDesc}>AI가 이번 주 가용 금액 초과 이력과{"\n"}소비 패턴을 분석하는 공간입니다.</Text>
-        </View>
-    );
-}
 
 export default function MainTabNavigator() {
     return (
@@ -73,8 +61,8 @@ export default function MainTabNavigator() {
             })}
         >
 
-            <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />
-            <Tab.Screen name="소비분석" component={AnalysisScreen} />
+            <Tab.Screen name="홈" component={HomeScreen} />
+            <Tab.Screen name="소비분석" component={SpendingReport} />
             <Tab.Screen name="AI채팅" component={ChatScreen} />
             <Tab.Screen name="토큰미션" component={DepositDetailScreen} />
         </Tab.Navigator>
