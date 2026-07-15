@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function MissionDetailScreen({ route, navigation }: any) {
     const [loading, setLoading] = useState(false);
 
+    // 🎯 [데이터 체인 연동] SpendAlert에서 커스텀 조율된 mission 객체를 안전하게 받아옵니다.
     const mission = route.params?.mission || {
         id: 1,
         category: '배달/외식',
@@ -23,9 +24,10 @@ export default function MissionDetailScreen({ route, navigation }: any) {
         try {
             const token = await AsyncStorage.getItem('userToken');
 
-            // 🎯 [핵심] 수락 시 로컬 저장소에 보증금 액수와 제목을 임시 저장 (홈/보증금 화면과 실시간 공유)
+            // 🎯 [핵심] 수락 시 로컬 저장소에 보증금 액수, 미션 제목, 그리고 "조정된 기간"까지 세트메뉴로 저장!
             await AsyncStorage.setItem('demo_locked_amount', mission.depositAmount.toString());
             await AsyncStorage.setItem('demo_locked_title', mission.description);
+            await AsyncStorage.setItem('demo_locked_duration', mission.durationDays.toString()); // 🎯 D-Day 동적 갱신용 기록 추가
 
             const response = await fetch(`http://localhost:8080/api/missions/${mission.id}/accept`, {
                 method: 'POST',
@@ -39,9 +41,10 @@ export default function MissionDetailScreen({ route, navigation }: any) {
                 showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount); // 데모
             }
         } catch (error) {
-            // 🎯 통신이 끊겨도 로컬 저장소에 저장하여 발표장 정상 동작 보장
+            // 🎯 통신이 끊겨도 로컬 저장소에 데이터 자산 저장하여 발표장 무결점 시연 보장
             await AsyncStorage.setItem('demo_locked_amount', mission.depositAmount.toString());
             await AsyncStorage.setItem('demo_locked_title', mission.description);
+            await AsyncStorage.setItem('demo_locked_duration', mission.durationDays.toString());
             showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount); // 데모 방어
         } finally {
             setLoading(false);
@@ -56,7 +59,7 @@ export default function MissionDetailScreen({ route, navigation }: any) {
                 {
                     text: '보증금 현황 확인',
                     onPress: () => {
-                        // 하단바가 유지되는 탭 네비게이션으로 부드럽게 점프
+                        // 하단바가 유지되는 탭 네비게이션으로 안전하게 점프
                         navigation.navigate('MainTabs', { screen: '토큰미션' });
                     }
                 }
@@ -77,7 +80,10 @@ export default function MissionDetailScreen({ route, navigation }: any) {
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.card}>
                     <View style={styles.badge}><Text style={styles.badgeText}>AI 맞춤 제안</Text></View>
-                    <Text style={styles.title}>{mission.description}</Text>
+                    {/* 🎯 슬라이더에서 조정한 일수가 제목에도 반영될 수 있도록 "X일" 동적 렌더링 치환 */}
+                    <Text style={styles.title}>
+                        {mission.description.replace(/\d+일/, `${mission.durationDays}일`)}
+                    </Text>
                     <Text style={styles.reasonText}>💡 {mission.proposalReason}</Text>
                 </View>
 
@@ -103,7 +109,8 @@ export default function MissionDetailScreen({ route, navigation }: any) {
                             <Ionicons name="ellipse" size={8} color="#009D8B" style={{ marginTop: 6 }} />
                             <Text style={styles.stepText}>
                                 <Text style={{fontWeight: 'bold'}}>수행 기간: </Text>
-                                오늘부터 <Text style={{fontWeight: 'bold'}}>{mission.durationDays}일 동안</Text> 유지하면 성공입니다.
+                                {/* 🎯 슬라이더로 조정한 일수가 가이드에 동적으로 정확하게 찍힙니다! */}
+                                오늘부터 <Text style={{fontWeight: 'bold', color: '#009D8B'}}>{mission.durationDays}일 동안</Text> 유지하면 성공입니다.
                             </Text>
                         </View>
                     </View>

@@ -51,7 +51,7 @@ export default function App() {
         <Stack.Screen name="DepositDetail" component={DepositDetailScreen} />
         <Stack.Screen name="GoalDetail" component={GoalDetailScreen} />
         <Stack.Screen name="AlramChatScreen" component={AlramChatScreen} />
-        <Stack.Screen name="SpendAlertScreen" component={SpendAlertScreen} />
+        <Stack.Screen name="SpendAlert" component={SpendAlertScreen} />
         <Stack.Screen name="SuccessGoalScreen" component={SuccessGoalScreen} />
         <Stack.Screen name="SpendingReport" component={SpendingReport} />
         <Stack.Screen name="SpendingDate" component={SpendingDate} />

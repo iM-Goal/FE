@@ -64,7 +64,7 @@ export default function CheckGoalScreen({ navigation, route }: any) {
   const handleRegisterPress = async () => {
     setLoading(true);
 
-    await AsyncStorage.setItem('FORCE_SHOW_GOAL', 'true');
+    await AsyncStorage.setItem('demo_goal_created', 'true');
     Alert.alert('성공', '목표 등록이 성공적으로 완료되었습니다!', [
       {
         text: '확인',

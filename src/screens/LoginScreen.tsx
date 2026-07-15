@@ -36,18 +36,30 @@ export default function LoginScreen({ navigation }: any) {
                 const token = result.accessToken || result.token || result.data?.token;
 
                 if (token) {
+                    // 🎯 [신규 추가] 이전 계정이나 테스트로 남아있던 데모 데이터 완전 박멸!
+                    await AsyncStorage.removeItem('demo_goal_created');
+                    await AsyncStorage.removeItem('demo_locked_amount');
+                    await AsyncStorage.removeItem('demo_locked_title');
+                    await AsyncStorage.removeItem('demo_locked_duration');
+
                     // 토큰을 안전하게 기기에 보관합니다.
                     await AsyncStorage.setItem('userToken', token);
                     Alert.alert('성공', '로그인이 완료되었습니다!');
                     console.log('✅ 기기에 안전하게 저장된 토큰:', token);
                     navigation.navigate('MainTabs');
-                } else {
-                    console.error('🚨 에러: 서버 응답에 accessToken 필드가 없습니다.');
-                    Alert.alert('안내(데모)', '토큰 규격 불일치로 임시 우회 진입합니다.');
+                }  else {
+                console.error('🚨 에러: 서버 응답에 accessToken 필드가 없습니다.');
+                Alert.alert('안내(데모)', '토큰 규격 불일치로 임시 우회 진입합니다.');
 
-                    await AsyncStorage.setItem('userToken', 'dummy_token_for_demo');
-                    navigation.navigate('MainTabs');
-                }
+                // 🎯 [신규 추가] 우회 로그인 시에도 깔끔하게 데이터 청소
+                    await AsyncStorage.removeItem('demo_goal_created');
+                await AsyncStorage.removeItem('demo_locked_amount');
+                await AsyncStorage.removeItem('demo_locked_title');
+                await AsyncStorage.removeItem('demo_locked_duration');
+
+                await AsyncStorage.setItem('userToken', 'dummy_token_for_demo');
+                navigation.navigate('MainTabs');
+            }
             } else {
                 if (result.code === 'INVALID_CREDENTIALS') {
                     Alert.alert('오류', '이메일 또는 비밀번호가 일치하지 않습니다.');
