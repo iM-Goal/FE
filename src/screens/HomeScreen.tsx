@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,20 +8,20 @@ import { useFocusEffect } from '@react-navigation/native';
 export default function HomeScreen({ navigation, route }: any) {
   // 상태 관리 State
   const [hasGoal, setHasGoal] = useState(false);
-  const [nickname, setNickname] = useState('고객');
+  const [nickname, setNickname] = useState('아이엠');
   const [goalData, setGoalData] = useState<any>(null);
   const [walletAmount, setWalletAmount] = useState('0');
   const [loading, setLoading] = useState(true);
 
   // 오늘의 일일 가용 금액 및 남은 가용 금액 상태 관리
+  // 🎯 [수치 통일]: 초기 상태는 지출 0원, 남은 금액 50,000원 전액 보존!
   const [todaySpending, setTodaySpending] = useState({
-    dailyBudget: 20000,
-    remainingBudget: 11500,
-    todaySpend: 8500,
-    usageRate: 42.5
+    dailyBudget: 50000,
+    remainingBudget: 50000,
+    todaySpend: 0,
+    usageRate: 0.0
   });
 
-  // API 융합 및 실시간 자산/소비 조회 함수
   const fetchHomeData = async () => {
     setLoading(true);
     try {
@@ -31,97 +31,77 @@ export default function HomeScreen({ navigation, route }: any) {
         'Authorization': `Bearer ${token}`
       };
 
-      // 🎯 네 개의 API를 동시에 병렬 호출하여 속도를 극대화합니다.
-      const [dashboardRes, goalsRes, depositsRes, todaySpendingRes] = await Promise.all([
-        fetch('http://localhost:8080/api/dashboard', { method: 'GET', headers }),
-        fetch('http://localhost:8080/api/goals', { method: 'GET', headers }),
-        fetch('http://localhost:8080/api/deposits', { method: 'GET', headers }),
-        fetch('http://localhost:8080/api/spending/today', { method: 'GET', headers }) // 🎯 오늘 소비 현황 API 결합
-      ]);
-
-      let sumLocked = 0;
-
-      // 로컬 스토리지 데모 자산 브릿지 검사
+      const localGoalCreated = await AsyncStorage.getItem('demo_goal_created');
       const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
-      if (localLockedStr) {
-        sumLocked += parseInt(localLockedStr, 10);
-      }
+      const hasAcceptedLocalMission = localLockedStr !== null;
 
-      // [1] 오늘 소비 실데이터 실시간 동기화
-      if (todaySpendingRes.status === 200) {
-        const spendingJson = await todaySpendingRes.json();
-        if (spendingJson.data) {
+      if (localGoalCreated === 'true') {
+        setHasGoal(true);
+        setNickname('아이엠');
+        setGoalData({
+          title: '제주도 푸른 바다 여행 ✈️',
+          targetAmount: 300000,
+          currentAmount: 35000,
+          achievementRate: 11.6
+        });
+
+        // 🎯 [수치 통일 핵심 분기]
+        if (hasAcceptedLocalMission) {
+          // 🔥 [트리거 이후]: 가짜 결제 15,000원이 반영된 상태로 정확히 매핑!
+          const baseLocked = parseInt(localLockedStr || '15000', 10);
           setTodaySpending({
-            dailyBudget: spendingJson.data.dailyBudget || 20000,
-            remainingBudget: spendingJson.data.remainingBudget || 0,
-            todaySpend: spendingJson.data.todaySpend || 0,
-            usageRate: (spendingJson.data.usageRate || 0) > 1 ? spendingJson.data.usageRate : (spendingJson.data.usageRate || 0) * 100
+            dailyBudget: 50000,
+            remainingBudget: 35000,     // 🎯 50,000 - 15,000 = 35,000원 남음!
+            todaySpend: 15000,         // 🎯 방금 쓴 15,000원 딱 표시!
+            usageRate: 30.0            // 🎯 사용률 30%로 게이지 연동
           });
-        }
-      }
-
-      // [2] 목표 및 대시보드 기초 바인딩
-      if (dashboardRes.status === 200 && goalsRes.status === 200) {
-        const dashboardJson = await dashboardRes.json();
-        const goalsJson = await goalsRes.json();
-
-        const dbData = dashboardJson.data;
-        const goalDataList = goalsJson.data;
-
-        if (goalDataList && goalDataList.shortGoal) {
-          const short = goalDataList.shortGoal;
-          setGoalData({
-            title: short.itemName,
-            targetAmount: short.targetAmount,
-            currentAmount: short.currentAmount,
-            achievementRate: short.achievementRate
-          });
-          setHasGoal(true);
+          setWalletAmount(baseLocked.toLocaleString());
         } else {
-          setHasGoal(false);
+          // ❄️ [가짜 결제 전]: 아주 깨끗하고 안전한 가용 상태 (0원 지출)
+          setTodaySpending({
+            dailyBudget: 50000,
+            remainingBudget: 50000,
+            todaySpend: 0,
+            usageRate: 0.0
+          });
+          setWalletAmount('0');
         }
-
-        // 백엔드 API에서 읽어온 자산 더하기
-        if (depositsRes.status === 200) {
-          const depositsJson = await depositsRes.json();
-          const deposits = depositsJson.data;
-
-          if (deposits && Array.isArray(deposits) && deposits.length > 0) {
-            deposits.forEach((item: any) => {
-              if (item.status === 'LOCKED' || item.status === '진행 중') {
-                sumLocked += (item.amount || item.imkrwAmount || 0);
-              }
-            });
-          }
-        }
-
-        setWalletAmount(sumLocked > 0 ? sumLocked.toLocaleString() : (dbData?.totalSavedAmount || 0).toLocaleString());
-
       } else {
         setHasGoal(false);
+        setWalletAmount('0');
       }
+
+      // 백엔드 연결 시 동기화 (오프라인 시 작동 생략)
+      try {
+        const [dashboardRes, goalsRes, depositsRes, todaySpendingRes] = await Promise.all([
+          fetch('http://localhost:8080/api/dashboard', { method: 'GET', headers }),
+          fetch('http://localhost:8080/api/goals', { method: 'GET', headers }),
+          fetch('http://localhost:8080/api/deposits', { method: 'GET', headers }),
+          fetch('http://localhost:8080/api/spending/today', { method: 'GET', headers })
+        ]);
+
+        if (goalsRes.status === 200) {
+          const goalsJson = await goalsRes.json();
+          const goalDataList = goalsJson.data;
+
+          if (goalDataList && goalDataList.shortGoal) {
+            const short = goalDataList.shortGoal;
+            setGoalData({
+              title: short.itemName,
+              targetAmount: short.targetAmount,
+              currentAmount: short.currentAmount,
+              achievementRate: short.achievementRate
+            });
+            setHasGoal(true);
+            await AsyncStorage.setItem('demo_goal_created', 'true');
+          }
+        }
+      } catch (err) {
+        // 백엔드 미구동 시 예외 가드
+      }
+
     } catch (error) {
-      console.log('🚨 API 융합 통신 실패, 데모 폴백 작동:', error);
-      setNickname('아이엠');
-      setHasGoal(true);
-      setGoalData({
-        title: '제주도 푸른 바다 여행',
-        targetAmount: 300000,
-        currentAmount: 35000,
-        achievementRate: 11.6
-      });
-
-      // 데모 상황 시 과소비 알림창 수치와 싱크를 맞춰 아슬아슬한 상황 연출
-      setTodaySpending({
-        dailyBudget: 50000,
-        remainingBudget: 3000,
-        todaySpend: 47000,
-        usageRate: 94.0
-      });
-
-      const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
-      const baseLocked = localLockedStr ? parseInt(localLockedStr, 10) : 15000;
-      setWalletAmount(baseLocked.toLocaleString());
+      console.log('🚨 홈 상태 처리 오류:', error);
     } finally {
       setLoading(false);
     }
@@ -134,6 +114,12 @@ export default function HomeScreen({ navigation, route }: any) {
   );
 
   const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  const handleCreateMockGoal = async () => {
+    await AsyncStorage.setItem('demo_goal_created', 'true');
+    Alert.alert("🎉 목표 설정 완료", "제주도 푸른 바다 여행 목표가 새롭게 시작됩니다!");
+    fetchHomeData();
+  };
 
   const renderEmptyState = () => (
       <View style={styles.emptyContainer}>
@@ -153,7 +139,7 @@ export default function HomeScreen({ navigation, route }: any) {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyMainText}>아직 설정된 목표가 없어요</Text>
             <Text style={styles.emptySubText}>이루고 싶은 목표를 등록해보세요! AI 페이스메이커가 페이스를 잡아드릴게요.</Text>
-            <TouchableOpacity style={styles.emptyAddButton} onPress={() => navigation.navigate('AddGoal')}>
+            <TouchableOpacity style={styles.emptyAddButton} onPress={handleCreateMockGoal}>
               <Ionicons name="add" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.emptyAddButtonText}>목표 설정하러 가기</Text>
             </TouchableOpacity>
@@ -167,10 +153,9 @@ export default function HomeScreen({ navigation, route }: any) {
     const targetAmount = goalData?.targetAmount || 0;
     const currentAmount = goalData?.currentAmount || 0;
     const achievementRate = goalData?.achievementRate || 0;
-    const remainingAmount = targetAmount - currentAmount > 0 ? targetAmount - currentAmount : 0;
 
-    // 가용 예산 위험 수위 체크 (80% 이상 소진 시 경고 톤)
-    const isDanger = todaySpending.usageRate >= 80;
+    // 🎯 [수정]: 30% 지출은 '임계 위험'까지는 아니므로 알림 조건을 유연하게 변경하거나 메시지를 조율합니다.
+    const isSpent = todaySpending.todaySpend > 0;
 
     return (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -183,20 +168,34 @@ export default function HomeScreen({ navigation, route }: any) {
           <View style={styles.header}>
             <View>
               <Text style={styles.welcomeText}>{nickname}님 👋</Text>
-              <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
+              {isSpent ? (
+                  <Text style={[styles.subWelcomeText, { color: '#004B87', fontWeight: 'bold' }]}>
+                    🔔 방금 새로운 배달 지출이 감지되었습니다.
+                  </Text>
+              ) : (
+                  <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
+              )}
             </View>
             <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('ChatScreen')}>
               <View style={styles.notiBadgeContainer}>
                 <Ionicons name="notifications-outline" size={30} color="#004B87" />
-                <View style={styles.notiDot} />
+                {isSpent && <View style={styles.notiDot} />}
               </View>
             </TouchableOpacity>
           </View>
 
           <View style={styles.characterSection}>
             <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>현재 페이스를 아주 잘 유지하고 있어요! 🎉</Text>
-              <Text style={[styles.speechText, { marginTop: 2 }]}>이대로 목표 금액까지 함께 달려가요.</Text>
+              {isSpent ? (
+                  <Text style={[styles.speechText, { color: '#004B87' }]}>
+                    앗, 방금 소비로 페이스가 급해졌어요! AI 락업 미션 카드를 확인하세요! 🚨
+                  </Text>
+              ) : (
+                  <>
+                    <Text style={styles.speechText}>현재 소비 페이스가 아주 안전합니다! 🎉</Text>
+                    <Text style={[styles.speechText, { marginTop: 2, color: '#009D8B' }]}>이대로 목표 금액까지 함께 달려가요.</Text>
+                  </>
+              )}
               <View style={styles.speechTriangle} />
             </View>
             <View style={styles.characterRow}>
@@ -207,7 +206,6 @@ export default function HomeScreen({ navigation, route }: any) {
             </View>
           </View>
 
-          {/* 🎯 [고도화된 메인 대시보드 카드] */}
           <View style={styles.goalCard}>
             <Text style={styles.goalTitle}>{title}</Text>
             <View style={styles.goalInfoRow}>
@@ -226,7 +224,6 @@ export default function HomeScreen({ navigation, route }: any) {
               <View style={[styles.progressBarFill, { width: `${achievementRate}%` }]} />
             </View>
 
-            {/*오늘의 일일 가용금액 및 남은 가용금액 디스플레이 영역 */}
             <View style={styles.spendingIndicatorContainer}>
               <View style={styles.spendingIndicatorRow}>
                 <View style={styles.indicatorLeft}>
@@ -239,16 +236,17 @@ export default function HomeScreen({ navigation, route }: any) {
               <View style={[styles.spendingIndicatorRow, { marginTop: 10 }]}>
                 <View style={styles.indicatorLeft}>
                   <Ionicons
-                      name={isDanger ? "alert-circle" : "wallet-outline"}
+                      name={isSpent ? "alert-circle" : "wallet-outline"}
                       size={16}
-                      color={isDanger ? "#EF4444" : "#009D8B"}
+                      color={isSpent ? "#004B87" : "#009D8B"}
                       style={{ marginRight: 6 }}
                   />
-                  <Text style={[styles.indicatorLabel, isDanger && { color: '#EF4444', fontWeight: '700' }]}>
+                  <Text style={[styles.indicatorLabel, isSpent && { color: '#004B87', fontWeight: '700' }]}>
                     오늘 남은 가용 금액
                   </Text>
                 </View>
-                <Text style={[styles.indicatorValue, { fontSize: 18 }, isDanger ? { color: '#EF4444' } : { color: '#009D8B' }]}>
+                {/* 🎯 [수정]: 50,000원에서 15,000원 뺀 35,000원이 예쁘게 찍힙니다! */}
+                <Text style={[styles.indicatorValue, { fontSize: 18 }, isSpent ? { color: '#004B87' } : { color: '#009D8B' }]}>
                   {formatNumber(todaySpending.remainingBudget)}원
                 </Text>
               </View>
@@ -328,7 +326,7 @@ const styles = StyleSheet.create({
   subWelcomeText: { fontSize: 13, color: '#4B5563', marginTop: 4, fontWeight: '500' },
   notiButton: { padding: 4 },
   notiBadgeContainer: { position: 'relative' },
-  notiDot: { position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }, // 미션 알림 유도 점
+  notiDot: { position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
   characterSection: { alignItems: 'flex-start', marginBottom: 12, width: '100%' },
   speechBubble: { backgroundColor: '#E6F6F4', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start', position: 'relative', marginLeft: 15, borderWidth: 1, borderColor: '#B3E5E0' },
   speechText: { color: '#004B87', fontSize: 13, fontWeight: '600', textAlign: 'left', lineHeight: 18 },
@@ -338,7 +336,6 @@ const styles = StyleSheet.create({
   islandImage: { width: 95, height: 95, resizeMode: 'contain' },
   islandContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingBottom: 10 },
 
-  // 메인 카드 레이아웃 고도화
   goalCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24, marginTop : -35 },
   goalTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
   goalInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -352,7 +349,6 @@ const styles = StyleSheet.create({
   progressBarBackground: { height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginTop: 14, marginBottom: 16 },
   progressBarFill: { height: '100%', backgroundColor: '#009D8B', borderRadius: 4 },
 
-  // 🎯 가용 예산 상세 컴포넌트 스타일링
   spendingIndicatorContainer: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#F1F5F9' },
   spendingIndicatorRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   indicatorLeft: { flexDirection: 'row', alignItems: 'center' },

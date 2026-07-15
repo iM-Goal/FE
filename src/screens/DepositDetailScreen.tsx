@@ -3,14 +3,13 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Act
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // 🎯 화면 진입 시 실시간 조회를 위한 훅 추가
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function DepositDetailScreen({ navigation }: any) {
     const [missionList, setMissionList] = useState<any[]>([]);
     const [totalLockedAmount, setTotalLockedAmount] = useState<string>('0');
     const [loading, setLoading] = useState<boolean>(true);
 
-    // 📡 백ened GET /api/deposits API 실시간 호출 함수
     const fetchDeposits = async () => {
         setLoading(true);
         try {
@@ -23,15 +22,42 @@ export default function DepositDetailScreen({ navigation }: any) {
                 },
             });
 
+            let sumLocked = 0;
+            let list: any[] = [];
+
+            // 🎯 로컬 저장소 수락 미션 검사
+            const localAmountStr = await AsyncStorage.getItem('demo_locked_amount');
+            const localTitle = await AsyncStorage.getItem('demo_locked_title');
+            const localDurationStr = await AsyncStorage.getItem('demo_locked_duration');
+
+            if (localAmountStr) {
+                const localAmount = parseInt(localAmountStr, 10);
+                const localDuration = localDurationStr ? parseInt(localDurationStr, 10) : 3;
+
+                sumLocked += localAmount;
+
+                const targetDate = new Date();
+                targetDate.setDate(targetDate.getDate() + localDuration);
+                const formattedExpiryDate = `${targetDate.getFullYear()}.${String(targetDate.getMonth() + 1).padStart(2, '0')}.${String(targetDate.getDate()).padStart(2, '0')}`;
+
+                list.push({
+                    id: 'demo-local-mission',
+                    name: localTitle ? localTitle.replace(/\d+일/, `${localDuration}일`) : `${localDuration}일 참아서 밸런스 맞추기`,
+                    amount: `${localAmount.toLocaleString()}원`,
+                    rawAmount: localAmount,
+                    dDay: `D-${localDuration}`,
+                    date: `${formattedExpiryDate} 만기`,
+                    status: '진행 중'
+                });
+            }
+
+            // 백엔드 데이터 동기화
             if (response.status === 200) {
                 const resData = await response.json();
                 const deposits = resData.data;
 
                 if (deposits && Array.isArray(deposits) && deposits.length > 0) {
-                    let sumLocked = 0;
-
-                    const formattedList = deposits.map((item: any, index: number) => {
-                        // 🎯 백엔드 명세 규격 동기화 (LOCKED 상태인 보증금 필터링 계산)
+                    deposits.forEach((item: any, index: number) => {
                         const isLocked = item.status === 'LOCKED' || item.status === '진행 중';
                         const itemAmount = item.amount || item.imkrwAmount || 0;
 
@@ -40,51 +66,35 @@ export default function DepositDetailScreen({ navigation }: any) {
                         const targetDateStr = isLocked ? item.lockedAt : (item.releasedAt || item.lockedAt);
                         const formattedDate = targetDateStr ? targetDateStr.substring(0, 10).replace(/-/g, '.') : '2026.07.12';
 
-                        return {
-                            id: item.id ? item.id.toString() : `dep-${index}`,
-                            // 🎯 [핵심 교정] 백엔드 명세 필드 파싱 방어 코드 (description이나 category, missionId 대응)
-                            name: item.missionName || item.description || `${item.category || '절약'} 스마트 미션 보증금`,
-                            amount: `${itemAmount.toLocaleString()}원`,
-                            rawAmount: isLocked ? itemAmount : 0,
-                            dDay: isLocked ? '진행중' : '완료',
-                            date: targetDateStr ? `${formattedDate} ${isLocked ? '만기' : '해제'}` : '2026.07.12 만기',
-                            status: isLocked ? '진행 중' : '해제 완료'
-                        };
+                        // 중복 방지 처리하며 리스트 삽입
+                        if (!list.some(existing => existing.id === item.id?.toString())) {
+                            list.push({
+                                id: item.id ? item.id.toString() : `dep-${index}`,
+                                name: item.missionName || item.description || `${item.category || '절약'} 스마트 미션 보증금`,
+                                amount: `${itemAmount.toLocaleString()}원`,
+                                rawAmount: isLocked ? itemAmount : 0,
+                                dDay: isLocked ? '진행중' : '완료',
+                                date: targetDateStr ? `${formattedDate} ${isLocked ? '만기' : '해제'}` : '2026.07.12 만기',
+                                status: isLocked ? '진행 중' : '해제 완료'
+                            });
+                        }
                     });
-
-                    setMissionList(formattedList);
-                    setTotalLockedAmount(sumLocked.toLocaleString());
-                } else {
-                    applyDemoFallback();
                 }
-            } else {
-                applyDemoFallback();
             }
+
+            // 🎯 [초기 제로화 교정]: 더미 데이터 강제 생성을 완전히 삭제하고, 데이터가 없다면 빈 리스트([])로 세팅합니다.
+            setMissionList(list);
+            setTotalLockedAmount(sumLocked.toLocaleString());
+
         } catch (error) {
-            console.log('🚨 보증금 조회 API 통신 실패 (시연 모드 폴백):', error);
-            applyDemoFallback();
+            console.log('🚨 보증금 조회 실패:', error);
+            setMissionList([]);
+            setTotalLockedAmount('0');
         } finally {
             setLoading(false);
         }
     };
 
-    // 🎬 수락 완료 버튼을 누르고 넘어왔을 때 무조건 리스트에 추가되어 보이도록 하는 데모 모드 장치
-    const applyDemoFallback = () => {
-        setMissionList([
-            {
-                id: 'demo-1',
-                name: '배달 3일 참아서 밸런스 맞추기 ',
-                amount: '15,000원',
-                rawAmount: 15000,
-                dDay: '진행중',
-                date: '2026.07.18 만기',
-                status: '진행 중'
-            }
-        ]);
-        setTotalLockedAmount('15,000');
-    };
-
-    //ChatScreen이나 MissionDetail에서 수락을 누른 후 이 화면으로 들어올 때 자동으로 데이터를 새로고침합니다.
     useFocusEffect(
         useCallback(() => {
             fetchDeposits();
@@ -93,7 +103,6 @@ export default function DepositDetailScreen({ navigation }: any) {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* 상단 헤더 바 */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                     <Ionicons name="chevron-back" size={24} color="#111827" />
@@ -104,7 +113,6 @@ export default function DepositDetailScreen({ navigation }: any) {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* iM 뱅크 시그니처 톤 그라데이션 배너 */}
                 <LinearGradient colors={['#004B87', '#009D8B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryCard}>
                     <Text style={styles.summaryLabel}>현재 스마트계약으로 보호 중인 보증금</Text>
                     <Text style={styles.summaryAmount}>{totalLockedAmount} 원</Text>
@@ -118,6 +126,7 @@ export default function DepositDetailScreen({ navigation }: any) {
                         <ActivityIndicator size="large" color="#009D8B" />
                     </View>
                 ) : missionList.length === 0 ? (
+                    // 🎯 초기 진입 시 깔끔한 완전 빈 상태 UI 노출
                     <View style={styles.emptyMissionContainer}>
                         <Ionicons name="shield-checkmark-outline" size={48} color="#9CA3AF" />
                         <Text style={styles.emptyMissionTitle}>보관 중인 보증금 미션이 없어요</Text>
@@ -126,7 +135,6 @@ export default function DepositDetailScreen({ navigation }: any) {
                         </Text>
                     </View>
                 ) : (
-                    /* 실제 미션 타임라인 컴포넌트 */
                     <View style={styles.timelineContainer}>
                         {missionList.map((item, index) => {
                             const isCompleted = item.status === '해제 완료';
@@ -182,6 +190,7 @@ export default function DepositDetailScreen({ navigation }: any) {
     );
 }
 
+// 스타일 시트는 그대로 유지
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, height: 50, marginTop: 10 },
@@ -215,7 +224,6 @@ const styles = StyleSheet.create({
     lineColumn: { alignItems: 'center', marginRight: 16, width: 14 },
     timelineLine: { width: 1.5, flex: 1, backgroundColor: '#E5E7EB', marginTop: -2 },
 
-    // 🎨 진행 중일 때 타임라인 도트 포인트를 빨간색 대신 iM민트(#009D8B)로 통일감 부여
     timelineDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, zIndex: 2, justifyContent: 'center', alignItems: 'center' },
 
     infoCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
