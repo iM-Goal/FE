@@ -39,7 +39,7 @@ const slides = [
   },
   {
     title: "좋은 선택지를 찾는 중이에요",
-    description: "요청하신 에이전스 상품을\n비교하고 있어요",
+    description: "요청하신 상품을\n비교하고 있어요",
   },
 ];
 
