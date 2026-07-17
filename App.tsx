@@ -24,6 +24,7 @@ import MissionDetail from "./src/screens/MissionDetailScreen";
 import SettingGoalScreen from "./src/screens/SettingGoalScreen";
 import PictureUpload from "./src/screens/PictureUpload";
 import LinkUpload from "./src/screens/LinkUpload";
+import SalaryDistributionScreen from "./src/screens/SalaryDistributioinScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -63,6 +64,7 @@ export default function App() {
         <Stack.Screen name="SettingGoalScreen" component={SettingGoalScreen} />
         <Stack.Screen name="PictureUpload" component={PictureUpload} />
         <Stack.Screen name="LinkUpload" component={LinkUpload} />
+        <Stack.Screen name="SalaryDistributionScreen" component={SalaryDistributionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

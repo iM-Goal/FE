@@ -17,8 +17,8 @@ export default function HomeScreen({ navigation, route }: any) {
   const [isSalaryDistributed, setIsSalaryDistributed] = useState(false);
 
   // 예금 잔액 동적 싱크용 상태 변수
-  const [livingAccountBalance, setLivingAccountBalance] = useState(2000000); // 초기 200만 원
-  const [freeAccountBalance, setFreeAccountBalance] = useState(1000000);     // 초기 100만 원
+  const [livingAccountBalance, setLivingAccountBalance] = useState(2000000); // 초기 무조건 200만 원
+  const [freeAccountBalance, setFreeAccountBalance] = useState(1000000);     // 초기 무조건 100만 원
 
   // 오늘의 일일 가용 금액 및 남은 가용 금액 상태 관리
   const [todaySpending, setTodaySpending] = useState({
@@ -32,10 +32,7 @@ export default function HomeScreen({ navigation, route }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('userToken');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
       const localGoalCreated = await AsyncStorage.getItem('demo_goal_created');
       const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
@@ -45,24 +42,46 @@ export default function HomeScreen({ navigation, route }: any) {
       const salaryDistributedFlag = localSalaryDistributed === 'true';
       setIsSalaryDistributed(salaryDistributedFlag);
 
-      // 🎯 [자산 실시간 계산 알고리즘 수정]
-      let currentLiving = 2000000; // 초기 생활비 2,000,000원 기본 세팅
-      let currentFree = 1000000;   // 초기 자유예금 1,000,000원 기본 세팅
+      // 🎯 [자산 실시간 누적 계산 알고리즘 완전 모니터링화]
+      let currentLiving = 2000000; // 초기 생활비 무조건 2,000,000원 기본 세팅
+      let currentFree = 1000000;   // 초기 자유예금 무조건 1,000,000원 기본 세팅
+      let baseGoalAmount = 0;
+      let baseRate = 0.0;
 
-      // 🎯 [핵심 패치]: 배달 결제 발생 시, 배달 1.5만 원 + 락업 보증금 1.5만 원 총 3만 원을 자유 예금에서 일괄 차감합니다!
+      // 1. 월급 자동 자전 분배가 체결되었다면 ➔ 각 계좌 몫만큼 누적 가산 및 목표 저축액 가산
+      if (salaryDistributedFlag) {
+        currentLiving += 1100000; // 분배 시 3,100,000원
+        currentFree += 1000000;   // 분배 시 2,000,000원 베이스라인 이동
+        baseGoalAmount = 200000;  // 🎯 분배 체결 시에만 명확하게 20만 원으로 점프
+      }
+
+      // 2. 보증금 락업 미션을 수락했다면 ➔ 배달 1.5만 + 보증금 1.5만 총 3만 원 자유 예금에서 차감 누적
       if (hasAcceptedLocalMission) {
         const lockedVal = parseInt(localLockedStr || '15000', 10);
-        const deliverySpending = 15000; // 배달 결제 금액
-        currentFree = currentFree - lockedVal - deliverySpending; // 1,000,000 - 15,000 - 15,000 = 970,000원
+        const deliverySpending = 15000;
+        currentFree = currentFree - lockedVal - deliverySpending; // 자유예금 실시간 차감
+
+        setTodaySpending({
+          dailyBudget: 50000,
+          remainingBudget: 35000,
+          todaySpend: 15000,
+          usageRate: 30.0
+        });
+        setWalletAmount(lockedVal.toLocaleString());
+      } else {
+        setTodaySpending({
+          dailyBudget: 50000,
+          remainingBudget: 50000,
+          todaySpend: 0,
+          usageRate: 0.0
+        });
+        setWalletAmount('0');
       }
 
-      // 2. 월급 자동 자전 분배가 체결되었다면 ➔ 각 계좌 몫만큼 추가 수혈
-      if (salaryDistributedFlag) {
-        currentLiving += 1100000;
-        currentFree += 1000000;
-      }
+      // 최종 목표 저축 달성률 동적 계산 ($200,000 / $300,000 = 66.6%$)
+      baseRate = (baseGoalAmount / 300000) * 100;
 
-      // 실시간 데이터 바인딩
+      // 계산된 시연 시나리오 실시간 누적 수치를 순정 상태값에 주입
       setLivingAccountBalance(currentLiving);
       setFreeAccountBalance(currentFree);
 
@@ -70,67 +89,43 @@ export default function HomeScreen({ navigation, route }: any) {
         setHasGoal(true);
         setNickname('아이엠');
 
-        const baseGoalAmount = salaryDistributedFlag ? 200000 : 0;
-        const baseRate = salaryDistributedFlag ? 66.6 : 0.0;
-
+        // 🎯 [완벽 고정]: 백엔드 API 상태나 예외 케이스에 오염되지 않도록
+        // 철저하게 로컬 플래그 연산으로 정렬된 clean 장부를 기본 데이터로 확정 렌더링 유도합니다.
         setGoalData({
           title: '제주도 푸른 바다 여행 ✈️',
           targetAmount: 300000,
           currentAmount: baseGoalAmount,
-          achievementRate: baseRate
+          achievementRate: parseFloat(baseRate.toFixed(1))
         });
 
-        // 가용 예산 분기
-        if (hasAcceptedLocalMission) {
-          const baseLocked = parseInt(localLockedStr || '15000', 10);
-          setTodaySpending({
-            dailyBudget: 50000,
-            remainingBudget: 35000,
-            todaySpend: 15000,
-            usageRate: 30.0
-          });
-          setWalletAmount(baseLocked.toLocaleString());
-        } else {
-          setTodaySpending({
-            dailyBudget: 50000,
-            remainingBudget: 50000,
-            todaySpend: 0,
-            usageRate: 0.0
-          });
-          setWalletAmount('0');
+        // 🎯 [오프라인/온라인 동기화 격리 가드 패치]
+        try {
+          const goalsRes = await fetch('http://localhost:8080/api/goals', { method: 'GET', headers });
+          if (goalsRes.status === 200) {
+            const goalsJson = await goalsRes.json();
+            if (goalsJson.data?.shortGoal) {
+              const short = goalsJson.data.shortGoal;
+
+              // 🎯 [치명적 버그 수정 포인트]: 백엔드 응답이 성공이더라도, 사용자가 앱 내에서 아직
+              // [월급 자동 자전 분배]를 최종 수락(`salaryDistributedFlag = true`)한 상태가 아니라면
+              // 서버의 예전 캐시 데이터가 메인 화면을 강제 오버라이딩(66.7%로 강제 회귀)하지 못하도록 조건문 가드를 완전히 단단히 묶어 고정합니다.
+              if (salaryDistributedFlag && short.currentAmount > 0) {
+                setGoalData({
+                  title: short.itemName,
+                  targetAmount: short.targetAmount,
+                  currentAmount: short.currentAmount,
+                  achievementRate: short.achievementRate
+                });
+              }
+            }
+          }
+        } catch (err) {
+          // 백엔드가 꺼지거나 예외로 튕겨도 상단에서 확정 바인딩한 순정 장부(0원/0%)가 안전하게 유지됩니다.
         }
+
       } else {
         setHasGoal(false);
         setWalletAmount('0');
-      }
-
-      // 백엔드 연결 시 동기화 (오프라인 가드)
-      try {
-        const [dashboardRes, goalsRes, depositsRes, todaySpendingRes] = await Promise.all([
-          fetch('http://localhost:8080/api/dashboard', { method: 'GET', headers }),
-          fetch('http://localhost:8080/api/goals', { method: 'GET', headers }),
-          fetch('http://localhost:8080/api/deposits', { method: 'GET', headers }),
-          fetch('http://localhost:8080/api/spending/today', { method: 'GET', headers })
-        ]);
-
-        if (goalsRes.status === 200) {
-          const goalsJson = await goalsRes.json();
-          const goalDataList = goalsJson.data;
-
-          if (goalDataList && goalDataList.shortGoal) {
-            const short = goalDataList.shortGoal;
-            setGoalData({
-              title: short.itemName,
-              targetAmount: short.targetAmount,
-              currentAmount: short.currentAmount,
-              achievementRate: short.achievementRate
-            });
-            setHasGoal(true);
-            await AsyncStorage.setItem('demo_goal_created', 'true');
-          }
-        }
-      } catch (err) {
-        // 백엔드 오프라인 핸들링
       }
 
     } catch (error) {
@@ -149,7 +144,7 @@ export default function HomeScreen({ navigation, route }: any) {
   const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
   const handleCreateMockGoal = async () => {
-    navigation.navigate('AddGoal');
+    navigation.navigate('SettingGoalScreen');
   };
 
   const renderEmptyState = () => (
@@ -308,43 +303,22 @@ export default function HomeScreen({ navigation, route }: any) {
             </View>
           </TouchableOpacity>
 
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>예금 자산</Text>
+          <Text style={styles.sectionTitle}>예금 자산</Text>
           <View style={styles.normalWalletContainer}>
-            {!isSalaryDistributed ? (
-                <View>
-                  <View style={styles.normalTokenRow}>
-                    <View style={styles.normalLeftRow}>
-                      <View style={[styles.normalDot, { backgroundColor: '#FBBF24' }]} />
-                      <Text style={styles.normalTokenTitle}>iM 생활비 예금</Text>
-                    </View>
-                    <Text style={styles.normalTokenAmount}>{formatNumber(livingAccountBalance)} 원</Text>
-                  </View>
-                  <View style={[styles.normalTokenRow, { marginTop: 12 }]}>
-                    <View style={styles.normalLeftRow}>
-                      <View style={[styles.normalDot, { backgroundColor: '#3B82F6' }]} />
-                      <Text style={styles.normalTokenTitle}>iM 주거래 자유예금</Text>
-                    </View>
-                    <Text style={styles.normalTokenAmount}>{formatNumber(freeAccountBalance)} 원</Text>
-                  </View>
-                </View>
-            ) : (
-                <View>
-                  <View style={styles.normalTokenRow}>
-                    <View style={styles.normalLeftRow}>
-                      <View style={[styles.normalDot, { backgroundColor: '#FBBF24' }]} />
-                      <Text style={styles.normalTokenTitle}>iM 생활비 예금 </Text>
-                    </View>
-                    <Text style={styles.normalTokenAmount}>{formatNumber(livingAccountBalance)} 원</Text>
-                  </View>
-                  <View style={[styles.normalTokenRow, { marginTop: 12 }]}>
-                    <View style={styles.normalLeftRow}>
-                      <View style={[styles.normalDot, { backgroundColor: '#3B82F6' }]} />
-                      <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 </Text>
-                    </View>
-                    <Text style={styles.normalTokenAmount}>{formatNumber(freeAccountBalance)} 원</Text>
-                  </View>
-                </View>
-            )}
+            <View style={styles.normalTokenRow}>
+              <View style={styles.normalLeftRow}>
+                <View style={[styles.normalDot, { backgroundColor: '#FBBF24' }]} />
+                <Text style={styles.normalTokenTitle}>iM 생활비 예금</Text>
+              </View>
+              <Text style={styles.normalTokenAmount}>{formatNumber(livingAccountBalance)} 원</Text>
+            </View>
+            <View style={[styles.normalTokenRow, { marginTop: 12 }]}>
+              <View style={styles.normalLeftRow}>
+                <View style={[styles.normalDot, { backgroundColor: '#3B82F6' }]} />
+                <Text style={styles.normalTokenTitle}>iM 주거래 자유예금</Text>
+              </View>
+              <Text style={styles.normalTokenAmount}>{formatNumber(freeAccountBalance)} 원</Text>
+            </View>
           </View>
         </ScrollView>
     );
@@ -402,7 +376,7 @@ const styles = StyleSheet.create({
   mintHighlightText: { color: '#009D8B', fontWeight: '700' },
   pinkHighlightText: { color: '#FF5E62', fontWeight: '700' },
   percentContainer: { justifyContent: 'center', alignItems: 'center' },
-  percentText: { fontSize: 50, fontFamily: 'IM_Hyemin-Bold', color: '#009D8B', letterSpacing: -1 },
+  percentText: { fontSize: 50, fontFamily : 'IM_Hyemin-Bold',color: '#009D8B', fontWeight: 'bold' },
   progressBarBackground: { height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginTop: 14, marginBottom: 16 },
   progressBarFill: { height: '100%', backgroundColor: '#009D8B', borderRadius: 4 },
 

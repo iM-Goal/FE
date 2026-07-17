@@ -10,7 +10,7 @@ export default function MissionDetailScreen({ route, navigation }: any) {
     const mission = route.params?.mission || {
         id: 1,
         category: '배달/외식',
-        description: '3일 참아서 밸런스 맞추기',
+        description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳',
         proposalReason: '이번 주 배달을 평소보다 많이 시켰어요',
         depositAmount: 15000,
         durationDays: 3,
@@ -24,10 +24,14 @@ export default function MissionDetailScreen({ route, navigation }: any) {
         try {
             const token = await AsyncStorage.getItem('userToken');
 
-            // 🎯 [핵심] 수락 시 로컬 저장소에 보증금 액수, 미션 제목, 그리고 "조정된 기간"까지 세트메뉴로 저장!
+            // 🎯 [핵심 패치]: mission.description이 undefined일 때 null이 들어가는 것을 방지하고 확실한 대체 문자열을 저장합니다.
+            const safeTitle = mission.description
+                ? mission.description
+                : `${mission.durationDays}일 동안 배달 챌린지 도전하기 🍳`;
+
             await AsyncStorage.setItem('demo_locked_amount', mission.depositAmount.toString());
-            await AsyncStorage.setItem('demo_locked_title', mission.description);
-            await AsyncStorage.setItem('demo_locked_duration', mission.durationDays.toString()); // 🎯 D-Day 동적 갱신용 기록 추가
+            await AsyncStorage.setItem('demo_locked_title', safeTitle); // 🎯 가드 처리된 문자열 주입
+            await AsyncStorage.setItem('demo_locked_duration', mission.durationDays.toString());
 
             const response = await fetch(`http://localhost:8080/api/missions/${mission.id}/accept`, {
                 method: 'POST',
@@ -38,14 +42,18 @@ export default function MissionDetailScreen({ route, navigation }: any) {
                 const resData = await response.json();
                 showSuccessAlert(resData.data?.lockTxHash || '0x8fB23c9A1b...', resData.data?.amount || mission.depositAmount);
             } else {
-                showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount); // 데모
+                showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount);
             }
         } catch (error) {
-            // 🎯 통신이 끊겨도 로컬 저장소에 데이터 자산 저장하여 발표장 무결점 시연 보장
+            // 🎯 catch 블록 내부의 저장소 저장 구역도 똑같이 안전 가드로 방어합니다.
+            const safeTitle = mission.description
+                ? mission.description
+                : `${mission.durationDays}일 동안 배달 챌린지 도전하기 🍳`;
+
             await AsyncStorage.setItem('demo_locked_amount', mission.depositAmount.toString());
-            await AsyncStorage.setItem('demo_locked_title', mission.description);
+            await AsyncStorage.setItem('demo_locked_title', safeTitle); // 🎯 가드 처리된 문자열 주입
             await AsyncStorage.setItem('demo_locked_duration', mission.durationDays.toString());
-            showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount); // 데모 방어
+            showSuccessAlert('0x8fB23c9A1b7e4d5F6c7d8E9f2A0b1C3d4E5f6G7h8', mission.depositAmount);
         } finally {
             setLoading(false);
         }
@@ -82,7 +90,10 @@ export default function MissionDetailScreen({ route, navigation }: any) {
                     <View style={styles.badge}><Text style={styles.badgeText}>AI 맞춤 제안</Text></View>
                     {/* 🎯 슬라이더에서 조정한 일수가 제목에도 반영될 수 있도록 "X일" 동적 렌더링 치환 */}
                     <Text style={styles.title}>
-                        {mission.description.replace(/\d+일/, `${mission.durationDays}일`)}
+                        {mission.description
+                            ? mission.description.replace(/\d+일/, `${mission.durationDays}일`)
+                            : `${mission.durationDays}일 동안 배달 챌린지 도전하기 🍳`
+                        }
                     </Text>
                     <Text style={styles.reasonText}>💡 {mission.proposalReason}</Text>
                 </View>

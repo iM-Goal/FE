@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line, Polyline, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -12,98 +13,98 @@ export default function GoalDetailScreen({ navigation, route }: any) {
     const [goalDetail, setGoalDetail] = useState<any>({
         itemName: '제주도 푸른 바다 여행 ✈️',
         targetAmount: 300000,
-        currentAmount: 0,        // 🎯 최초 0원 상태 동기화
-        achievementRate: 0,      // 🎯 최초 0% 상태 동기화
+        currentAmount: 0,
+        achievementRate: 0,
         endDate: '2026.08.30',
         daysLeft: 45,
-        dailyBudget: 50000,      // 🎯 일일 가용 예산 디폴트 50,000원 매핑
-        estimatedDate: '8월 30일', // 🎯 만기일과 AI 분석 타깃일 매칭
+        dailyBudget: 50000,
+        estimatedDate: '8월 30일',
     });
 
     const [loading, setLoading] = useState(false);
 
-    // 📡 [API 연동 및 수치 맞춤 개조]
+    // 📡 [API 연동 및 가상 시연 장부 엔진 정밀 결합]
     const fetchGoalProgress = async () => {
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem('userToken');
             const goalId = route.params?.goalId || 1;
 
-            const response = await fetch(`http://localhost:8080/api/goals/${goalId}/progress`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-            });
-
-            // 🎯 로컬 미션 수락에 따른 강제 데이터 트리거 싱크 체크
+            // 🎯 로컬 미션 및 월급 분배 캐시 장부 플래그 실시간 포착
             const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
             const localSalaryDistributed = await AsyncStorage.getItem('demo_salary_distributed');
             const hasAcceptedLocalMission = localLockedStr !== null;
             const isSalaryDistributed = localSalaryDistributed === 'true';
 
-            if (response.status === 200) {
-                const resData = await response.json();
-                const progress = resData.data;
+            // 1. [최우선권] 시연 시나리오에 따른 정밀 동적 바인딩 스케줄러
+            let currentAmt = 0;
+            let rateVal = 0.0;
 
-                if (progress) {
-                    let displayEstimated = '8월 30일';
-                    let formattedXAxisDate = '8.30';
-
-                    if (progress.estimatedCompletionDate) {
-                        const dateParts = progress.estimatedCompletionDate.split('-');
-                        if (dateParts.length === 3) {
-                            displayEstimated = `${parseInt(dateParts[1], 10)}월 ${parseInt(dateParts[2], 10)}일`;
-                            formattedXAxisDate = `${parseInt(dateParts[1], 10)}.${parseInt(dateParts[2], 10)}`;
-                        }
-                    }
-
-                    setGoalDetail((prev: any) => ({
-                        ...prev,
-                        currentAmount: progress.currentAmount ?? prev.currentAmount,
-                        achievementRate: progress.achievementRate ?? prev.achievementRate,
-                        daysLeft: progress.daysLeft ?? prev.daysLeft,
-                        endDate: progress.estimatedCompletionDate
-                            ? progress.estimatedCompletionDate.replace(/-/g, '.')
-                            : prev.endDate,
-                        estimatedDate: displayEstimated,
-                        xAxisEndDate: formattedXAxisDate
-                    }));
-                }
-            } else if (isSalaryDistributed) {
-                // 🎯 [월급 자동이체 분배 완료 시점] -> 누적 저축 200,000원(66.6%), 일일 가용금액 50,000원 유지
-                setGoalDetail((prev: any) => ({
-                    ...prev,
-                    currentAmount: 200000,
-                    achievementRate: 66.6,
-                    daysLeft: 45,
-                    endDate: '2026.08.30',
-                    estimatedDate: '8월 30일',
-                    dailyBudget: 50000
-                }));
+            if (isSalaryDistributed) {
+                currentAmt = 200000;
+                rateVal = 66.7; // 🎯 20만 원 저축 시 66.7% 정밀 고정
             } else if (hasAcceptedLocalMission) {
-                // 🎯 [가짜 결제 및 미션 도전 상태] -> 보증금 락업 15,000원(5.0%), 일일 가용금액 50,000원 유지
-                setGoalDetail((prev: any) => ({
-                    ...prev,
-                    currentAmount: 15000,
-                    achievementRate: 5.0,
-                    daysLeft: 45,
-                    endDate: '2026.08.30',
-                    estimatedDate: '8월 30일',
-                    dailyBudget: 50000
-                }));
+                currentAmt = 15000;
+                rateVal = 5.0;  // 🎯 보증금 계약 체결 시 5% 동적 할당
             } else {
-                // 🎯 [최초 가입 및 목표 생성 초기 상태] -> 모은 돈 0원(0%), 일일 가용금액 50,000원 유지
-                setGoalDetail((prev: any) => ({
-                    ...prev,
-                    currentAmount: 0,
-                    achievementRate: 0.0,
-                    daysLeft: 45,
-                    endDate: '2026.08.30',
-                    estimatedDate: '8월 30일',
-                    dailyBudget: 50000
-                }));
+                currentAmt = 0;
+                rateVal = 0.0;  // 🎯 최초 회원가입/목표 생성 직후는 완벽하게 0원/0%
+            }
+
+            const defaultData = {
+                itemName: '제주도 푸른 바다 여행 ✈️',
+                targetAmount: 300000,
+                currentAmount: currentAmt,
+                achievementRate: rateVal,
+                endDate: '2026.08.30',
+                daysLeft: 45,
+                dailyBudget: 50000,
+                estimatedDate: '8월 30일'
+            };
+
+            setGoalDetail(defaultData);
+
+            // 2. 🎯 [완벽 안전 가드 격리]: 백엔드 데이터 가로채기 차단
+            try {
+                const response = await fetch(`http://localhost:8080/api/goals/${goalId}/progress`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                });
+
+                if (response.status === 200) {
+                    const resData = await response.json();
+                    const progress = resData.data;
+
+                    // 🎯 오직 가상 트리거 시연 상황이 아닐 때만 실제 백엔드 적재 데이터 오버라이딩 허용!
+                    if (!isSalaryDistributed && !hasAcceptedLocalMission && progress && progress.currentAmount > 0) {
+                        let displayEstimated = '8월 30일';
+                        let formattedXAxisDate = '8.30';
+
+                        if (progress.estimatedCompletionDate) {
+                            const dateParts = progress.estimatedCompletionDate.split('-');
+                            if (dateParts.length === 3) {
+                                displayEstimated = `${parseInt(dateParts[1], 10)}월 ${parseInt(dateParts[2], 10)}일`;
+                                formattedXAxisDate = `${parseInt(dateParts[1], 10)}.${parseInt(dateParts[2], 10)}`;
+                            }
+                        }
+
+                        setGoalDetail((prev: any) => ({
+                            ...prev,
+                            currentAmount: progress.currentAmount,
+                            achievementRate: progress.achievementRate,
+                            daysLeft: progress.daysLeft,
+                            endDate: progress.estimatedCompletionDate ? progress.estimatedCompletionDate.replace(/-/g, '.') : prev.endDate,
+                            estimatedDate: displayEstimated,
+                            xAxisEndDate: formattedXAxisDate
+                        }));
+                    }
+                }
+            } catch (err) {
+                // 백엔드가 오프라인이거나 catch로 튕겨도 상단에서 확정한 defaultData가 완벽하게 수치 고정 유지됩니다.
+                setGoalDetail(defaultData);
             }
         } catch (error) {
             console.log('🚨 목표 진행률 데이터 싱크 에러:', error);
@@ -112,9 +113,12 @@ export default function GoalDetailScreen({ navigation, route }: any) {
         }
     };
 
-    useEffect(() => {
-        fetchGoalProgress();
-    }, []);
+    // 📡 useFocusEffect 적용으로 뒤로가기 혹은 탭 전환 시 화면 숫자가 실시간 무결점 동기화 처리됩니다.
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchGoalProgress();
+        }, [route.params?.goalId])
+    );
 
     const formatNumber = (num: number) => (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
@@ -134,7 +138,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
     const characterX = center + radius * Math.cos(angleRad) - charSize / 2;
     const characterY = center + radius * Math.sin(angleRad) - charSize / 2;
 
-    // 그래프 X축 우측 끝 날짜 동적 파싱 계산 보정
     const getXAxisEndDate = () => {
         if (goalDetail.xAxisEndDate) return goalDetail.xAxisEndDate;
         const parts = goalDetail.endDate.split('.');
@@ -157,7 +160,7 @@ export default function GoalDetailScreen({ navigation, route }: any) {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* ⭕ 1. 완벽하게 결합된 원형 차트 & 캐릭터 & 중앙 퍼센트 */}
+                {/* ⭕ 1. 원형 차트 & 캐릭터 & 중앙 퍼센트 */}
                 <View style={styles.chartWrapper}>
                     <View style={{
                         width: chartSize,
@@ -192,7 +195,7 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                             </Svg>
                         </View>
 
-                        {/* 2층: 🎯 퍼센트 글자 */}
+                        {/* 2층: 퍼센트 글자 */}
                         <View style={{
                             position: 'absolute',
                             top: 0,
@@ -215,7 +218,7 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                             )}
                         </View>
 
-                        {/* 3층: 🎯 달리는 캐릭터 */}
+                        {/* 3층: 달리는 캐릭터 */}
                         <Image
                             source={require('../../assets/running_blue.png')}
                             style={{
@@ -230,7 +233,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                         />
                     </View>
 
-                    {/* 🎯 [디자인 고도화] 남은 일수 디데이와 완료 예정 날짜 완전 결합 */}
                     <Text style={styles.dateLineText}>
                         목표일까지 <Text style={{color: '#009D8B'}}>D-{goalDetail.daysLeft}일</Text> ({goalDetail.endDate} 완료 예정)
                     </Text>
@@ -251,7 +253,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                     <View style={[styles.gridRow, { borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingVertical: 16 }]}>
                         <View style={{ paddingHorizontal: 16, width: '100%' }}>
                             <Text style={styles.cellLabel}>목표를 위한 일일 가용 금액</Text>
-                            {/* 🎯 [수치 싱크 패치]: 하드코딩 20,000원이 아닌 동적으로 조절되는 goalDetail.dailyBudget 연동! */}
                             <Text style={[styles.cellValue, { textAlign: 'right', fontSize: 22, color: '#111827', marginTop: 4 }]}>
                                 {formatNumber(goalDetail.dailyBudget)}원
                             </Text>
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
 
     aiBadge: { backgroundColor: '#E6F6F4', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 8 },
     aiBadgeText: { fontSize: 11, fontWeight: '700', color: '#009D8B' },
-    aiPredictionMain: { fontSize: 14, fontWeight: '600', fontFamily: 'IM_Hyemin-Bold', color: '#4B5563' },
-    aiPredictionHighlight: { fontSize: 18, fontWeight: '700', fontFamily: 'IM_Hyemin-Bold', color: '#111827', marginTop: 4 },
+    aiPredictionMain: { fontSize: 14, fontWeight: '600', color: '#4B5563' },
+    aiPredictionHighlight: { fontSize: 18,fontFamily : 'IM_Hyemin-Bold', fontWeight: '700', color: '#111827', marginTop: 4 },
     aiBannerCharacter: { width: 70, height: 65, resizeMode: 'contain', marginTop: 10 }
 });
