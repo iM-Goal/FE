@@ -15,7 +15,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -33,8 +32,8 @@ const ChatBubble = ({ children }: { children: React.ReactNode }) => (
 export default function ChatScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [triggerLoading, setTriggerLoading] = useState(false);
+  const [salaryLoading, setSalaryLoading] = useState(false); // 🎯 월급 로딩 추가
 
-  // 🎯 [수치 통일] 초기 상태는 지출 0원, 남은 금액 50,000원
   const [todaySpendData, setTodaySpendData] = useState({
     dailyBudget: 50000,
     todaySpend: 0,
@@ -43,11 +42,17 @@ export default function ChatScreen({ navigation }: any) {
   });
 
   const [proposals, setProposals] = useState<any[]>([]);
+  const [salaryNotification, setSalaryNotification] = useState<boolean>(false); // 🎯 월급 알림 카드 노출 여부
 
-  // 📡 화면에 진입할 때마다 로컬 장부(수락 여부)를 실시간 체크하여 상단 카드 수치 싱크 맞추기
   const checkSyncStatus = async () => {
     try {
       const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
+      const localSalaryDistributed = await AsyncStorage.getItem('demo_salary_distributed');
+
+      if (localSalaryDistributed === 'true') {
+        // 월급이 이미 분배 완료된 상태라면 알림 클리어
+        setSalaryNotification(false);
+      }
 
       if (localLockedStr) {
         setTodaySpendData({
@@ -56,23 +61,19 @@ export default function ChatScreen({ navigation }: any) {
           remainingBudget: 35000,
           usageRate: 30.0
         });
-        applyDemoData(); // 제안 카드도 유지
       } else {
-        // [트리거 전 초기 상태]: 깨끗한 0원 상태 대기
         setTodaySpendData({
           dailyBudget: 50000,
           todaySpend: 0,
           remainingBudget: 50000,
           usageRate: 0.0
         });
-        setProposals([]);
       }
     } catch (e) {
       console.log(e);
     }
   };
 
-  // 탭 이동이나 화면 포커스가 바뀔 때마다 실시간 수치 동기화 작동
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       checkSyncStatus();
@@ -86,6 +87,10 @@ export default function ChatScreen({ navigation }: any) {
       await AsyncStorage.removeItem('demo_locked_amount');
       await AsyncStorage.removeItem('demo_locked_title');
       await AsyncStorage.removeItem('demo_locked_duration');
+      await AsyncStorage.removeItem('demo_salary_distributed');
+      await AsyncStorage.removeItem('demo_living_amount');
+      await AsyncStorage.removeItem('demo_free_amount');
+      await AsyncStorage.removeItem('demo_goal_deposit');
 
       setTodaySpendData({
         dailyBudget: 50000,
@@ -94,102 +99,60 @@ export default function ChatScreen({ navigation }: any) {
         usageRate: 0.0
       });
       setProposals([]);
+      setSalaryNotification(false);
       Alert.alert("🔄 상태 초기화 완료", "모든 데이터가 최초 청정 상태로 리셋되었습니다.");
     } catch (e) {
       console.log(e);
     }
   };
 
+  // 🎯 [신규 추가] 1. 월급 입금 발생 시뮬레이션 버튼 액션
+  const handleTriggerSalaryPayment = () => {
+    setSalaryLoading(true);
+
+    // 시연장 긴장감 연출용 0.8초 딜레이
+    setTimeout(() => {
+      setSalaryLoading(false);
+      Alert.alert("💰 타행 입금 감지", "iM Bank 계좌로 월급 2,300,000원이 입금되었습니다!");
+
+      // 월급 인공지능 자전 분배 제안 카드 오픈!
+      setSalaryNotification(true);
+    }, 800);
+  };
+
+  // 2. 가짜 지출 결제 트리거 (기존 유지)
   const handleTriggerMockSpending = async () => {
     setTriggerLoading(true);
-
     setTimeout(async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
-
         const response = await fetch('http://localhost:8080/api/mock/trigger-spending', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            userId: 1,
-            merchantName: "배달의민족 (가짜 결제)",
-            amount: 15000,
-            category: "DELIVERY"
-          })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ userId: 1, merchantName: "배달의민족 (가짜 결제)", amount: 15000, category: "DELIVERY" })
         });
 
-        // 🎯 버튼을 누르는 순간 15,000원 차감 연출 시동
-        setTodaySpendData({
-          dailyBudget: 50000,
-          todaySpend: 15000,
-          remainingBudget: 35000,
-          usageRate: 30.0
-        });
+        setTodaySpendData({ dailyBudget: 50000, todaySpend: 15000, remainingBudget: 35000, usageRate: 30.0 });
 
-        if (response.status === 200) {
-          const resData = await response.json();
-          if (resData.hasNotification) {
-            Alert.alert("🚨 AI 과소비 에이전트 경보!", "금일 배달음식 과소비 임계점이 포착되었습니다. 자산 락업 방어 미션을 전송합니다.");
-
-            const liveMission = {
-              id: Date.now(),
-              category: '배달음식',
-              description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳',
-              proposalReason: resData.notificationMessage || '방금 배달 결제로 인해 이번 주 배달 지출 페이스가 무너지고 있습니다.',
-              depositAmount: 15000,
-              durationDays: 3,
-              limitAmount: 3000
-            };
-            setProposals([liveMission]);
+        Alert.alert("🚨 AI 과소비 에이전트 경보!", "금일 배달음식 과소비 임계점이 포착되었습니다. 자산 락업 방어 미션을 전송합니다.");
+        setProposals([
+          {
+            id: 999,
+            category: '배달/외식',
+            description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳',
+            proposalReason: '배달의민족 15,000원 결제로 인해 배달 카테고리 지출 속도가 4주 평균치 대비 34.5% 빨라졌습니다.',
+            depositAmount: 15000,
+            durationDays: 3,
+            limitAmount: 3000
           }
-        } else {
-          triggerLocalDemoSequence();
-        }
+        ]);
       } catch (error) {
-        triggerLocalDemoSequence();
+        setTodaySpendData({ dailyBudget: 50000, todaySpend: 15000, remainingBudget: 35000, usageRate: 30.0 });
+        setProposals([{ id: 999, category: '배달/외식', description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳', proposalReason: '배달의민족 15,000원 결제로 인해 배달 카테고리 지출 속도가 4주 평균치 대비 34.5% 빨라졌습니다.', depositAmount: 15000, durationDays: 3 }]);
       } finally {
         setTriggerLoading(false);
       }
     }, 1000);
-  };
-
-  const triggerLocalDemoSequence = () => {
-    Alert.alert("🚨 AI 과소비 에이전트 경보!", "금일 배달음식 과소비 임계점이 포착되었습니다. 자산 락업 방어 미션을 전송합니다.");
-    setTodaySpendData({
-      dailyBudget: 50000,
-      todaySpend: 15000,
-      remainingBudget: 35000,
-      usageRate: 30.0
-    });
-    setProposals([
-      {
-        id: 999,
-        category: '배달/외식',
-        description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳',
-        proposalReason: '배달의민족 15,000원 결제로 인해 배달 카테고리 지출 속도가 4주 평균치 대비 34.5% 빨라졌습니다.',
-        depositAmount: 15000,
-        durationDays: 3,
-        limitAmount: 3000
-      }
-    ]);
-  };
-
-  const applyDemoData = () => {
-    setProposals([
-      {
-        id: 1,
-        category: 'DELIVERY',
-        description: '3일 동안 배달 앱 참고 집밥 요리하기 🍳',
-        proposalReason: '배달의민족 15,000원 결제로 인해 배달 카테고리 지출 속도가 4주 평균치 대비 34.5% 빨라졌습니다.',
-        depositAmount: 15000,
-        overageRate: 34.5,
-        durationDays: 3,
-        limitAmount: 3000
-      }
-    ]);
   };
 
   const formatNumber = (num: number) => (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -206,27 +169,33 @@ export default function ChatScreen({ navigation }: any) {
           <Text style={[styles.headerLogo, { fontSize: 18, paddingLeft: 10 }]}>
             <Text style={{color: '#009D8B'}}>iM</Text> AgentiX
           </Text>
-
           <TouchableOpacity onPress={handleResetDemo} style={{ padding: 4 }}>
             <Ionicons name="refresh-circle" size={28} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-            style={styles.triggerButton}
-            onPress={handleTriggerMockSpending}
-            disabled={triggerLoading}
-            activeOpacity={0.8}
-        >
-          {triggerLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-              <Text style={styles.triggerButtonText}>⚡ 배달 1.5만원</Text>
-          )}
-        </TouchableOpacity>
+        {/* 🎯 제어 센터 대시보드: 두 개의 버튼이 나란히 배치됩니다 */}
+        <View style={styles.triggerContainer}>
+          <TouchableOpacity
+              style={[styles.triggerButton, { flex: 1, marginRight: 6 }]}
+              onPress={handleTriggerMockSpending}
+              disabled={triggerLoading}
+          >
+            {triggerLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.triggerButtonText}>⚡ 결제 발생 (1.5만)</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+              style={[styles.triggerButton, { flex: 1, marginLeft: 6, backgroundColor: '#004B87', shadowColor: '#004B87' }]}
+              onPress={handleTriggerSalaryPayment}
+              disabled={salaryLoading}
+          >
+            {salaryLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.triggerButtonText}>💰 월급 입금 (230만)</Text>}
+          </TouchableOpacity>
+        </View>
 
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: 16, paddingBottom: 80, paddingTop: 10 }]} showsVerticalScrollIndicator={false}>
 
+          {/* 소비 요약 카드 기본 장착 */}
           <ChatBubble>
             <Text style={[styles.bubbleTitle, { fontSize: 16, marginBottom: 6 }]}>오늘의 소비 요약 📝</Text>
             <Text style={[styles.bubbleSub, { fontSize: 13, marginBottom: 16, lineHeight: 18 }]}>
@@ -245,75 +214,75 @@ export default function ChatScreen({ navigation }: any) {
                 </Text>
               </View>
               <View style={[styles.progressBarBg, { height: 8, borderRadius: 4, marginTop: 8 }]}>
-                <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${Math.min(todaySpendData.usageRate, 100)}%`, backgroundColor: todaySpendData.usageRate > 0 ? '#004B87' : '#E2E8F0' }
-                    ]}
-                />
+                <View style={[styles.progressBarFill, { width: `${Math.min(todaySpendData.usageRate, 100)}%`, backgroundColor: todaySpendData.usageRate > 0 ? '#004B87' : '#E2E8F0' }]} />
               </View>
             </View>
           </ChatBubble>
 
-          {proposals.length === 0 ? (
+          {/* 🎯 2. [신규 조건부 렌더링]: 월급 입금 트리거 시 에이전트 분배 추천 카드 노출 */}
+          {salaryNotification && (
+              <ChatBubble>
+                <Text style={[styles.bubbleTitle, { fontSize: 16, marginBottom: 6 }]}>💸 AI 자율 예산 분배 제안</Text>
+                <Text style={[styles.bubbleSub, { fontSize: 13, marginBottom: 16, lineHeight: 18, textAlign: 'left' }]}>
+                  아이엠님, 이번 달 급여 2,300,000원이 확인되었습니다. 자동 분배를 가동할까요?
+                </Text>
+                <View style={[styles.innerCard, { alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16, borderRadius: 16 }]}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 4 }}>예상 분배 레이아웃</Text>
+                  <Text style={{ fontSize: 12, color: '#009D8B', fontWeight: '600', marginBottom: 12 }}>생활비 110만 / 자유예금 100만 / 저축 20만</Text>
+
+                  <TouchableOpacity
+                      style={[styles.mintButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: '#004B87' }]}
+                      onPress={() => navigation.navigate('SalaryDistribution')} // 🎯 분배 디테일 화면으로 사출!
+                      activeOpacity={0.7}
+                  >
+                    <Text style={[styles.mintButtonText, { fontSize: 14 }]}>분배 상세 내역 확인하기</Text>
+                  </TouchableOpacity>
+                </View>
+              </ChatBubble>
+          )}
+
+          {/* 과소비 방어 미션 리스트 */}
+          {proposals.map((mission: any) => (
+              <ChatBubble key={mission.id}>
+                <Text style={[styles.bubbleTitle, { fontSize: 16, marginBottom: 6 }]}>🔔 과소비 패턴 감지</Text>
+                <Text style={[styles.bubbleSub, { fontSize: 13, marginBottom: 16, lineHeight: 18 }]}>{mission.proposalReason}</Text>
+                <Text style={[styles.overspendAlertText, { fontSize: 14, marginBottom: 10 }]}>⚠️ 위험 지수 감지</Text>
+
+                <View style={[styles.overlapBarContainer, { marginVertical: 12 }]}>
+                  <View style={[styles.overlapBarBg, { height: 16, borderRadius: 8 }]}>
+                    <View style={[styles.overlapBarMint, { width: '60%' }]} />
+                    <View style={[styles.overlapBarOrange, { width: '40%' }]} />
+                  </View>
+                </View>
+
+                <View style={[styles.innerCard, { alignItems: 'center', paddingVertical: 22, paddingHorizontal: 16, borderRadius: 16 }]}>
+                  <View style={[styles.aiBadge, { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginBottom: 12 }]}>
+                    <Text style={[styles.aiBadgeText, { fontSize: 11 }]}>AI 에이전트 제안</Text>
+                  </View>
+                  <Text style={[styles.missionCardDescMain, { fontSize: 16, marginBottom: 8 }]}>{mission.description}</Text>
+                  <Text style={[styles.missionCardDescSub, { fontSize: 12, textAlign: 'center', lineHeight: 18 }]}>
+                    수락 시 초과 페이스 방어용 보증금{"\n"}
+                    <Text style={{color: '#004B87', fontWeight: 'bold'}}>{formatNumber(mission.depositAmount)} iMKRW</Text>가 필요해요.
+                  </Text>
+
+                  <TouchableOpacity
+                      style={[styles.mintButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 16 }]}
+                      onPress={() => navigation.navigate('SpendAlert', { mission })}
+                      activeOpacity={0.7}
+                  >
+                    <Text style={[styles.mintButtonText, { fontSize: 14 }]}>도전하기</Text>
+                  </TouchableOpacity>
+                </View>
+              </ChatBubble>
+          ))}
+
+          {proposals.length === 0 && !salaryNotification && (
               <View style={styles.emptyContainer}>
                 <Ionicons name="chatbox-ellipses-outline" size={40} color="#9CA3AF" />
-                <Text style={styles.emptyText}>아직 이상 과소비 징후가 감지되지 않았습니다. 상단 가짜 결제 버튼을 터치해 실시간 모니터링 시나리오를 구동해 보세요.</Text>
+                <Text style={styles.emptyText}> 상단의 시연 제어판 버튼을 통해 기능을 작동 시켜보세요. </Text>
               </View>
-          ) : (
-              proposals.map((mission: any) => (
-                  <ChatBubble key={mission.id}>
-                    <Text style={[styles.bubbleTitle, { fontSize: 16, marginBottom: 6 }]}>🔔 과소비 패턴 감지</Text>
-                    <Text style={[styles.bubbleSub, { fontSize: 13, marginBottom: 16, lineHeight: 18 }]}>{mission.proposalReason}</Text>
-
-                    <Text style={[styles.overspendAlertText, { fontSize: 14, marginBottom: 10 }]}>⚠️ 위험 지수 감지</Text>
-
-                    <View style={[styles.overlapBarContainer, { marginVertical: 12 }]}>
-                      <View style={[styles.overlapBarBg, { height: 16, borderRadius: 8 }]}>
-                        <View style={[styles.overlapBarMint, { width: '60%' }]} />
-                        <View style={[styles.overlapBarOrange, { width: '40%' }]} />
-                      </View>
-                      <View style={[styles.overlapBarLabels, { marginTop: 6 }]}>
-                        <View style={{ alignItems: 'center', marginLeft: '50%' }}>
-                          <Ionicons name="caret-up" size={12} color="#111827" />
-                          <Text style={[styles.overlapLabelSub, { fontSize: 10 }]}>4주 평균</Text>
-                          <Text style={[styles.overlapLabelMain, { fontSize: 11 }]}>₩24,000</Text>
-                        </View>
-                        <View style={{ alignItems: 'center', marginRight: '5%' }}>
-                          <Ionicons name="caret-up" size={12} color="#009D8B" />
-                          <Text style={[styles.overlapLabelSub, { fontSize: 10 }]}>이번 주 배달</Text>
-                          <Text style={[styles.overlapLabelMain, { fontSize: 11 }]}>₩39,000</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={[styles.innerCard, { alignItems: 'center', paddingVertical: 22, paddingHorizontal: 16, borderRadius: 16 }]}>
-                      <View style={[styles.aiBadge, { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginBottom: 12 }]}>
-                        <Text style={[styles.aiBadgeText, { fontSize: 11 }]}>AI 에이전트 제안</Text>
-                      </View>
-                      <Text style={[styles.missionCardDescMain, { fontSize: 16, marginBottom: 8 }]}>{mission.description}</Text>
-                      <Text style={[styles.missionCardDescSub, { fontSize: 12, textAlign: 'center', lineHeight: 18 }]}>
-                        수락 시 초과 페이스 방어용 보증금{"\n"}
-                        <Text style={{color: '#004B87', fontWeight: 'bold'}}>{formatNumber(mission.depositAmount)} iMKRW</Text>가 필요해요.
-                      </Text>
-
-                      <TouchableOpacity
-                          style={[styles.mintButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 16 }]}
-                          onPress={() => navigation.navigate('SpendAlert', { mission })}
-                          activeOpacity={0.7}
-                      >
-                        <Text style={[styles.mintButtonText, { fontSize: 14 }]}>도전하기</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                          style={[styles.greyButtonAction, { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 8 }]}
-                          activeOpacity={0.7}
-                      >
-                        <Text style={[styles.greyButtonText, { fontSize: 14 }]}>다른 미션 보기</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </ChatBubble>
-              ))
           )}
+
         </ScrollView>
       </SafeAreaView>
   );
@@ -325,6 +294,7 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   headerLogo: { fontWeight: '900', color: '#111827', letterSpacing: -0.5 },
   scrollContent: { },
+  triggerContainer: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8 }, // 🎯 가로 배열 컨테이너
   chatRow: { flexDirection: 'row', marginBottom: 28, alignItems: 'flex-start' },
   avatarContainer: { marginRight: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#E2E8F0', resizeMode: 'cover' },
@@ -349,24 +319,14 @@ const styles = StyleSheet.create({
   overlapBarBg: { flexDirection: 'row', overflow: 'hidden', backgroundColor: '#FCD34D' },
   overlapBarMint: { height: '100%', backgroundColor: '#00C4A7' },
   overlapBarOrange: { height: '100%', backgroundColor: '#FBBF24' },
-  overlapBarLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  overlapLabelSub: { color: '#6B7280', marginTop: 2 },
-  overlapLabelMain: { fontWeight: '700', color: '#111827', marginTop: 2 },
   aiBadge: { backgroundColor: '#E6F6F4' },
   aiBadgeText: { fontWeight: '700', color: '#009D8B' },
   missionCardDescMain: { fontWeight: '800', color: '#111827' },
   missionCardDescSub: { color: '#6B7280' },
   mintButtonAction: { backgroundColor: '#00C4A7', alignItems: 'center' },
   mintButtonText: { color: '#FFFFFF', fontWeight: '800' },
-  greyButtonAction: { backgroundColor: '#E5E7EB', alignItems: 'center' },
-  greyButtonText: { color: '#4B5563', fontWeight: '800' },
-  recommendCard: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
-  recommendHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  recommendTitle: { fontWeight: '800', color: '#111827' },
-  recommendBadge: { fontWeight: '700', color: '#009D8B' },
-  recommendDesc: { color: '#4B5563', fontWeight: '500' },
-  triggerButton: { backgroundColor: '#EF4444', paddingVertical: 14, marginHorizontal: 150, borderRadius: 12, alignItems: 'center', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3, marginTop: 4 },
-  triggerButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+  triggerButton: { backgroundColor: '#EF4444', paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3, marginTop: 4 },
+  triggerButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 24, marginTop: 20 },
   emptyText: { color: '#6B7280', fontSize: 13, textAlign: 'center', lineHeight: 20, marginTop: 12, fontWeight: '500' }
 });
