@@ -16,7 +16,7 @@ export default function GoalDetailScreen({ navigation, route }: any) {
         achievementRate: 0,      // 🎯 최초 0% 상태 동기화
         endDate: '2026.08.30',
         daysLeft: 45,
-        dailyBudget: 50000,      // 🎯 일일 가용 예산 5만원 싱크 매핑
+        dailyBudget: 50000,      // 🎯 일일 가용 예산 디폴트 50,000원 매핑
         estimatedDate: '8월 30일', // 🎯 만기일과 AI 분석 타깃일 매칭
     });
 
@@ -39,14 +39,15 @@ export default function GoalDetailScreen({ navigation, route }: any) {
 
             // 🎯 로컬 미션 수락에 따른 강제 데이터 트리거 싱크 체크
             const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
+            const localSalaryDistributed = await AsyncStorage.getItem('demo_salary_distributed');
             const hasAcceptedLocalMission = localLockedStr !== null;
+            const isSalaryDistributed = localSalaryDistributed === 'true';
 
             if (response.status === 200) {
                 const resData = await response.json();
                 const progress = resData.data;
 
                 if (progress) {
-                    // 날짜 데이터 파싱 및 가공 (2026-08-30 -> 월/일 추출)
                     let displayEstimated = '8월 30일';
                     let formattedXAxisDate = '8.30';
 
@@ -70,16 +71,38 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                         xAxisEndDate: formattedXAxisDate
                     }));
                 }
-            } else if (hasAcceptedLocalMission) {
-                // 🔥 [트리거 이후 오프라인 상태]: 미션 수락 후 수치 체인 동기화
+            } else if (isSalaryDistributed) {
+                // 🎯 [월급 자동이체 분배 완료 시점] -> 누적 저축 200,000원(66.6%), 일일 가용금액 50,000원 유지
                 setGoalDetail((prev: any) => ({
                     ...prev,
-                    currentAmount: 15000,      // 가짜 결제 및 미션 자산화 반영
-                    achievementRate: 5.0,      // 300,000원 중 15,000원으로 5% 달성률 보정
+                    currentAmount: 200000,
+                    achievementRate: 66.6,
                     daysLeft: 45,
                     endDate: '2026.08.30',
                     estimatedDate: '8월 30일',
-                    xAxisEndDate: '8.30'
+                    dailyBudget: 50000
+                }));
+            } else if (hasAcceptedLocalMission) {
+                // 🎯 [가짜 결제 및 미션 도전 상태] -> 보증금 락업 15,000원(5.0%), 일일 가용금액 50,000원 유지
+                setGoalDetail((prev: any) => ({
+                    ...prev,
+                    currentAmount: 15000,
+                    achievementRate: 5.0,
+                    daysLeft: 45,
+                    endDate: '2026.08.30',
+                    estimatedDate: '8월 30일',
+                    dailyBudget: 50000
+                }));
+            } else {
+                // 🎯 [최초 가입 및 목표 생성 초기 상태] -> 모은 돈 0원(0%), 일일 가용금액 50,000원 유지
+                setGoalDetail((prev: any) => ({
+                    ...prev,
+                    currentAmount: 0,
+                    achievementRate: 0.0,
+                    daysLeft: 45,
+                    endDate: '2026.08.30',
+                    estimatedDate: '8월 30일',
+                    dailyBudget: 50000
                 }));
             }
         } catch (error) {
@@ -222,13 +245,13 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                         </View>
                         <View style={styles.gridCell}>
                             <Text style={styles.cellLabel}>모은 금액</Text>
-                            {/* 🎯 다른 화면들과 완벽하게 싱크로율을 맞춘 누적 저축 금액 동적 노출 */}
                             <Text style={styles.cellValue}>{formatNumber(goalDetail.currentAmount)}원</Text>
                         </View>
                     </View>
                     <View style={[styles.gridRow, { borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingVertical: 16 }]}>
                         <View style={{ paddingHorizontal: 16, width: '100%' }}>
                             <Text style={styles.cellLabel}>목표를 위한 일일 가용 금액</Text>
+                            {/* 🎯 [수치 싱크 패치]: 하드코딩 20,000원이 아닌 동적으로 조절되는 goalDetail.dailyBudget 연동! */}
                             <Text style={[styles.cellValue, { textAlign: 'right', fontSize: 22, color: '#111827', marginTop: 4 }]}>
                                 {formatNumber(goalDetail.dailyBudget)}원
                             </Text>
@@ -280,7 +303,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                             <View style={styles.xAxisRow}>
                                 <Text style={styles.axisText}>07.12</Text>
                                 <Text style={[styles.axisText, { color: '#3B82F6', fontWeight: '700', marginLeft: 90 }]}>현재 {Math.round(goalDetail.achievementRate)}%</Text>
-                                {/* 🎯 [날짜 싱크 수정]: 그래프 하단의 가장 오른쪽 끝 만기 날짜도 완벽 동적 치환 */}
                                 <Text style={[styles.axisText, { marginLeft: 'auto' }]}>{getXAxisEndDate()}</Text>
                             </View>
                         </View>
@@ -293,7 +315,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                         <View style={styles.aiBadge}><Text style={styles.aiBadgeText}>AI 예측</Text></View>
                         <Text style={styles.aiPredictionMain}>현재 페이스를 유지하면</Text>
                         <Text style={styles.aiPredictionHighlight}>
-                            {/* 🎯 [날짜 싱크 수정]: 상단 목표 완료일과 완벽하게 매칭되도록 일치화 */}
                             <Text style={{ color: '#009D8B', fontWeight: '800' }}>{goalDetail.estimatedDate} 달성 가능</Text>해요!
                         </Text>
                     </View>
@@ -305,7 +326,6 @@ export default function GoalDetailScreen({ navigation, route }: any) {
     );
 }
 
-// 스타일 명세는 기존 규칙을 그대로 유지합니다.
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, height: 56 },

@@ -13,8 +13,14 @@ export default function HomeScreen({ navigation, route }: any) {
   const [walletAmount, setWalletAmount] = useState('0');
   const [loading, setLoading] = useState(true);
 
+  // 하단 UI 렌더링 구역용 월급 분배 플래그 상태 관리
+  const [isSalaryDistributed, setIsSalaryDistributed] = useState(false);
+
+  // 예금 잔액 동적 싱크용 상태 변수
+  const [livingAccountBalance, setLivingAccountBalance] = useState(2000000); // 초기 200만 원
+  const [freeAccountBalance, setFreeAccountBalance] = useState(1000000);     // 초기 100만 원
+
   // 오늘의 일일 가용 금액 및 남은 가용 금액 상태 관리
-  // 🎯 [수치 통일]: 초기 상태는 지출 0원, 남은 금액 50,000원 전액 보존!
   const [todaySpending, setTodaySpending] = useState({
     dailyBudget: 50000,
     remainingBudget: 50000,
@@ -35,29 +41,56 @@ export default function HomeScreen({ navigation, route }: any) {
       const localLockedStr = await AsyncStorage.getItem('demo_locked_amount');
       const hasAcceptedLocalMission = localLockedStr !== null;
 
+      const localSalaryDistributed = await AsyncStorage.getItem('demo_salary_distributed');
+      const salaryDistributedFlag = localSalaryDistributed === 'true';
+      setIsSalaryDistributed(salaryDistributedFlag);
+
+      // 🎯 [자산 실시간 계산 알고리즘 수정]
+      let currentLiving = 2000000; // 초기 생활비 2,000,000원 기본 세팅
+      let currentFree = 1000000;   // 초기 자유예금 1,000,000원 기본 세팅
+
+      // 🎯 [핵심 패치]: 배달 결제 발생 시, 배달 1.5만 원 + 락업 보증금 1.5만 원 총 3만 원을 자유 예금에서 일괄 차감합니다!
+      if (hasAcceptedLocalMission) {
+        const lockedVal = parseInt(localLockedStr || '15000', 10);
+        const deliverySpending = 15000; // 배달 결제 금액
+        currentFree = currentFree - lockedVal - deliverySpending; // 1,000,000 - 15,000 - 15,000 = 970,000원
+      }
+
+      // 2. 월급 자동 자전 분배가 체결되었다면 ➔ 각 계좌 몫만큼 추가 수혈
+      if (salaryDistributedFlag) {
+        currentLiving += 1100000;
+        currentFree += 1000000;
+      }
+
+      // 실시간 데이터 바인딩
+      setLivingAccountBalance(currentLiving);
+      setFreeAccountBalance(currentFree);
+
       if (localGoalCreated === 'true') {
         setHasGoal(true);
         setNickname('아이엠');
+
+        const baseGoalAmount = salaryDistributedFlag ? 200000 : 0;
+        const baseRate = salaryDistributedFlag ? 66.6 : 0.0;
+
         setGoalData({
           title: '제주도 푸른 바다 여행 ✈️',
           targetAmount: 300000,
-          currentAmount: 35000,
-          achievementRate: 11.6
+          currentAmount: baseGoalAmount,
+          achievementRate: baseRate
         });
 
-        // 🎯 [수치 통일 핵심 분기]
+        // 가용 예산 분기
         if (hasAcceptedLocalMission) {
-          // 🔥 [트리거 이후]: 가짜 결제 15,000원이 반영된 상태로 정확히 매핑!
           const baseLocked = parseInt(localLockedStr || '15000', 10);
           setTodaySpending({
             dailyBudget: 50000,
-            remainingBudget: 35000,     // 🎯 50,000 - 15,000 = 35,000원 남음!
-            todaySpend: 15000,         // 🎯 방금 쓴 15,000원 딱 표시!
-            usageRate: 30.0            // 🎯 사용률 30%로 게이지 연동
+            remainingBudget: 35000,
+            todaySpend: 15000,
+            usageRate: 30.0
           });
           setWalletAmount(baseLocked.toLocaleString());
         } else {
-          // ❄️ [가짜 결제 전]: 아주 깨끗하고 안전한 가용 상태 (0원 지출)
           setTodaySpending({
             dailyBudget: 50000,
             remainingBudget: 50000,
@@ -71,7 +104,7 @@ export default function HomeScreen({ navigation, route }: any) {
         setWalletAmount('0');
       }
 
-      // 백엔드 연결 시 동기화 (오프라인 시 작동 생략)
+      // 백엔드 연결 시 동기화 (오프라인 가드)
       try {
         const [dashboardRes, goalsRes, depositsRes, todaySpendingRes] = await Promise.all([
           fetch('http://localhost:8080/api/dashboard', { method: 'GET', headers }),
@@ -97,7 +130,7 @@ export default function HomeScreen({ navigation, route }: any) {
           }
         }
       } catch (err) {
-        // 백엔드 미구동 시 예외 가드
+        // 백엔드 오프라인 핸들링
       }
 
     } catch (error) {
@@ -116,9 +149,7 @@ export default function HomeScreen({ navigation, route }: any) {
   const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
   const handleCreateMockGoal = async () => {
-    await AsyncStorage.setItem('demo_goal_created', 'true');
-    Alert.alert("🎉 목표 설정 완료", "제주도 푸른 바다 여행 목표가 새롭게 시작됩니다!");
-    fetchHomeData();
+    navigation.navigate('AddGoal');
   };
 
   const renderEmptyState = () => (
@@ -154,7 +185,6 @@ export default function HomeScreen({ navigation, route }: any) {
     const currentAmount = goalData?.currentAmount || 0;
     const achievementRate = goalData?.achievementRate || 0;
 
-    // 🎯 [수정]: 30% 지출은 '임계 위험'까지는 아니므로 알림 조건을 유연하게 변경하거나 메시지를 조율합니다.
     const isSpent = todaySpending.todaySpend > 0;
 
     return (
@@ -245,7 +275,6 @@ export default function HomeScreen({ navigation, route }: any) {
                     오늘 남은 가용 금액
                   </Text>
                 </View>
-                {/* 🎯 [수정]: 50,000원에서 15,000원 뺀 35,000원이 예쁘게 찍힙니다! */}
                 <Text style={[styles.indicatorValue, { fontSize: 18 }, isSpent ? { color: '#004B87' } : { color: '#009D8B' }]}>
                   {formatNumber(todaySpending.remainingBudget)}원
                 </Text>
@@ -281,13 +310,41 @@ export default function HomeScreen({ navigation, route }: any) {
 
           <Text style={[styles.sectionTitle, { marginTop: 24 }]}>예금 자산</Text>
           <View style={styles.normalWalletContainer}>
-            <View style={styles.normalTokenRow}>
-              <View style={styles.normalLeftRow}>
-                <View style={[styles.normalDot, { backgroundColor: '#004B87' }]} />
-                <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 / 생활비</Text>
-              </View>
-              <Text style={styles.normalTokenAmount}>148,000 원</Text>
-            </View>
+            {!isSalaryDistributed ? (
+                <View>
+                  <View style={styles.normalTokenRow}>
+                    <View style={styles.normalLeftRow}>
+                      <View style={[styles.normalDot, { backgroundColor: '#FBBF24' }]} />
+                      <Text style={styles.normalTokenTitle}>iM 생활비 예금</Text>
+                    </View>
+                    <Text style={styles.normalTokenAmount}>{formatNumber(livingAccountBalance)} 원</Text>
+                  </View>
+                  <View style={[styles.normalTokenRow, { marginTop: 12 }]}>
+                    <View style={styles.normalLeftRow}>
+                      <View style={[styles.normalDot, { backgroundColor: '#3B82F6' }]} />
+                      <Text style={styles.normalTokenTitle}>iM 주거래 자유예금</Text>
+                    </View>
+                    <Text style={styles.normalTokenAmount}>{formatNumber(freeAccountBalance)} 원</Text>
+                  </View>
+                </View>
+            ) : (
+                <View>
+                  <View style={styles.normalTokenRow}>
+                    <View style={styles.normalLeftRow}>
+                      <View style={[styles.normalDot, { backgroundColor: '#FBBF24' }]} />
+                      <Text style={styles.normalTokenTitle}>iM 생활비 예금 </Text>
+                    </View>
+                    <Text style={styles.normalTokenAmount}>{formatNumber(livingAccountBalance)} 원</Text>
+                  </View>
+                  <View style={[styles.normalTokenRow, { marginTop: 12 }]}>
+                    <View style={styles.normalLeftRow}>
+                      <View style={[styles.normalDot, { backgroundColor: '#3B82F6' }]} />
+                      <Text style={styles.normalTokenTitle}>iM 주거래 자유예금 </Text>
+                    </View>
+                    <Text style={styles.normalTokenAmount}>{formatNumber(freeAccountBalance)} 원</Text>
+                  </View>
+                </View>
+            )}
           </View>
         </ScrollView>
     );
