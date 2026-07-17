@@ -9,7 +9,7 @@ import {
   ImageBackground,
   useWindowDimensions,
   Pressable,
-    Alert,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,28 +22,17 @@ type AnalyzedGoal = {
   durationDays: number;
 };
 
-const analyzedGoal: AnalyzedGoal = {
-  title: "제주도 푸른 바다 여행",
-  price:  300000,
-  period: "1개월",
-  speed: "8월 30일까지",
-  durationDays: 30,
-};
-
-const BASE_SCREEN_WIDTH = 300;
-const BASE_SCREEN_HEIGHT = 10;
+const BASE_SCREEN_HEIGHT = 812;
+const BASE_SCREEN_WIDTH = 390;
 
 export default function CheckGoalScreen({ navigation, route }: any) {
   const { width, height } = useWindowDimensions();
-  const frameWidth = Math.min(width, BASE_SCREEN_WIDTH);
-  const widthScale = Math.min(frameWidth / BASE_SCREEN_WIDTH, 1);
-  const heightScale = Math.min(
-    Math.max(height / BASE_SCREEN_HEIGHT, 0.86),
-    1.18,
-  );
-  const sizeScale = Math.min(widthScale, 1);
 
-  // 편집 버튼 호버 상태 관리
+  // 데스크탑 화면에서 좌우로 무한정 늘어나는 왜곡을 방지하기 위해 가로폭 최대값(450px) 제한 적용
+  const frameWidth = Math.min(width, 450);
+  const sizeScale = frameWidth / BASE_SCREEN_WIDTH;
+  const heightScale = Math.min(height, 850) / BASE_SCREEN_HEIGHT;
+
   const [isEditHovered, setIsEditHovered] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -54,13 +43,13 @@ export default function CheckGoalScreen({ navigation, route }: any) {
     speed: "8월 30일까지",
     durationDays: 30,
   };
+
   const handleBackPress = () => {
     if (navigation?.canGoBack?.()) {
       navigation.goBack();
     }
   };
 
-  // 맞아요, 등록하기 버튼 클릭 시 발동하는 핵심 API 통신 함수
   const handleRegisterPress = async () => {
     setLoading(true);
 
@@ -70,37 +59,125 @@ export default function CheckGoalScreen({ navigation, route }: any) {
         text: '확인',
         onPress: () => {
           setLoading(false);
-          // 🎯 홈화면으로 점프하면서 새로고침 파라미터를 넘겨 대시보드를 활성화시킵니다!
           navigation.navigate("MainTabs", {
             screen: "홈",
-            //params: { registeredSuccess: true }
           });
         }
       }
     ]);
   };
 
+  // 추천 저축 슬롯 계산 함수 (기간에 따라 동적 분류)
+  const getSavingSlot = (days: number, period: string) => {
+    if (days) {
+      if (days <= 90) return "단기 (1~3개월)";
+      if (days <= 365) return "중기 (3~12개월)";
+      return "장기 (1년 이상)";
+    }
+    if (period.includes("년")) return "장기 (1년 이상)";
+    const monthsMatch = period.match(/(\d+)\s*개월/);
+    if (monthsMatch) {
+      const months = parseInt(monthsMatch[1], 10);
+      if (months <= 3) return "단기 (1~3개월)";
+      if (months <= 12) return "중기 (3~12개월)";
+      return "장기 (1년 이상)";
+    }
+    return "단기 (1~3개월)";
+  };
+
   const dynamicStyles = {
     content: {
-      maxWidth: BASE_SCREEN_WIDTH,
+      maxWidth: frameWidth,
       minHeight: height,
-      paddingHorizontal: 17 * sizeScale,
-      paddingTop: 8 * heightScale,
-      paddingBottom: 24 * heightScale,
+      paddingHorizontal: 24 * sizeScale,
+      paddingTop: 16 * heightScale,
+      paddingBottom: 32 * heightScale,
     },
     header: {
-      marginBottom: 10 * heightScale,
-    },
-    titleBlock: {
+      height: 32 * heightScale,
       marginBottom: 16 * heightScale,
     },
-    resultCard: {
-      marginBottom: 23 * heightScale,
+    backButton: {
+      width: 32 * sizeScale,
+      height: 32 * sizeScale,
+      marginLeft: -8 * sizeScale,
     },
-    image: {
-      height: 134 * heightScale,
+    titleBlock: {
+      marginBottom: 28 * heightScale,
     },
-  };
+    title: {
+      fontSize: 26 * sizeScale,
+      lineHeight: 34 * sizeScale,
+    },
+    subtitle: {
+      fontSize: 14 * sizeScale,
+      lineHeight: 20 * sizeScale,
+      marginTop: 6 * heightScale,
+    },
+    imageContainer: {
+      width: "100%",
+      height: 220 * sizeScale,
+      borderRadius: 36 * sizeScale,
+      marginBottom: 24 * heightScale,
+    },
+    imageRadius: {
+      borderRadius: 36 * sizeScale,
+    },
+    goalSummary: {
+      marginBottom: 6 * heightScale,
+    },
+    goalLabel: {
+      fontSize: 20 * sizeScale,
+      lineHeight: 28 * sizeScale,
+    },
+    price: {
+      fontSize: 28 * sizeScale,
+      lineHeight: 36 * sizeScale,
+      marginBottom: 28 * heightScale,
+    },
+    editButton: {
+      width: 32 * sizeScale,
+      height: 32 * sizeScale,
+      borderRadius: 16 * sizeScale,
+    },
+    infoRow: {
+      gap: 12 * sizeScale,
+      marginBottom: 32 * heightScale,
+    },
+    infoBox: {
+      height: 64 * heightScale,
+      borderRadius: 16 * sizeScale,
+      paddingHorizontal: 12 * sizeScale,
+    },
+    infoLabel: {
+      fontSize: 11 * sizeScale,
+      lineHeight: 16 * sizeScale,
+    },
+    infoValue: {
+      fontSize: 15 * sizeScale,
+      lineHeight: 20 * sizeScale,
+      marginTop: 4 * heightScale,
+    },
+    buttonGroup: {
+      gap: 12 * heightScale,
+    },
+    primaryButton: {
+      height: 52 * heightScale,
+      borderRadius: 26 * sizeScale,
+    },
+    primaryButtonText: {
+      fontSize: 15 * sizeScale,
+      lineHeight: 22 * sizeScale,
+    },
+    secondaryButton: {
+      height: 52 * heightScale,
+      borderRadius: 26 * sizeScale,
+    },
+    secondaryButtonText: {
+      fontSize: 15 * sizeScale,
+      lineHeight: 22 * sizeScale,
+    },
+  } as any;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -109,82 +186,91 @@ export default function CheckGoalScreen({ navigation, route }: any) {
         contentContainerStyle={[styles.content, dynamicStyles.content]}
         showsVerticalScrollIndicator={false}
       >
+        {/* 상단 뒤로가기 헤더 */}
         <View style={[styles.header, dynamicStyles.header]}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleBackPress}
-            style={styles.backButton}
+            style={[styles.backButton, dynamicStyles.backButton]}
           >
-            <Ionicons name="chevron-back" size={24} color="#12191b" />
+            <Ionicons name="chevron-back" size={24 * sizeScale} color="#12191b" />
           </TouchableOpacity>
         </View>
 
+        {/* 타이틀 블록 */}
         <View style={[styles.titleBlock, dynamicStyles.titleBlock]}>
-          <Text style={styles.title}>목표를 찾았어요!</Text>
-          <Text style={styles.subtitle}>AI가 분석한 내용을 확인해보세요</Text>
+          <Text style={[styles.title, dynamicStyles.title]}>목표를 찾았어요!</Text>
+          <Text style={[styles.subtitle, dynamicStyles.subtitle]}>AI가 분석한 내용을 확인해보세요</Text>
         </View>
 
-        <View style={[styles.resultCard, dynamicStyles.resultCard]}>
-          <ImageBackground
-            source={require("../../assets/jeju.png")}
-            style={[styles.image, dynamicStyles.image]}
-            resizeMode="cover"
-            imageStyle={[styles.imageRadius, styles.imagePosition]}
-          />
+        {/* 메인 이미지 */}
+        <ImageBackground
+          source={require("../../assets/jeju.png")}
+          style={dynamicStyles.imageContainer}
+          resizeMode="cover"
+          imageStyle={dynamicStyles.imageRadius}
+        />
 
-          <View style={styles.goalSummary}>
-            <View style={styles.goalTextGroup}>
-              <Text style={styles.goalLabel}>{dynamicGoal.title}</Text>
-              <Text style={styles.price}>{dynamicGoal.price.toLocaleString()}원</Text>
-            </View>
+        {/* 목표명 및 편집 버튼 */}
+        <View style={[styles.goalSummary, dynamicStyles.goalSummary]}>
+          <Text style={[styles.goalLabel, dynamicStyles.goalLabel]} numberOfLines={1}>
+            {dynamicGoal.title}
+          </Text>
+          <Pressable
+            onPointerEnter={() => setIsEditHovered(true)}
+            onPointerLeave={() => setIsEditHovered(false)}
+            style={[
+              styles.editButton,
+              dynamicStyles.editButton,
+              isEditHovered && styles.editButtonHovered,
+            ]}
+          >
+            <Ionicons name="construct" size={16 * sizeScale} color="#ff7b22" />
+          </Pressable>
+        </View>
 
-            {/* 주황색 편집 버튼 마우스 오버 효과 추가 */}
-            <Pressable
-              onPointerEnter={() => setIsEditHovered(true)}
-              onPointerLeave={() => setIsEditHovered(false)}
-              style={[
-                styles.editButton,
-                isEditHovered && styles.editButtonHovered,
-              ]}
-            >
-              <Ionicons name="construct" size={16} color="#ff7b22" />
-            </Pressable>
+        {/* 금액 */}
+        <Text style={[styles.price, dynamicStyles.price]}>
+          {dynamicGoal.price.toLocaleString()}원
+        </Text>
+
+        {/* 정보 카드 리스트 (예상 기간 & 추천 저축 슬롯) */}
+        <View style={[styles.infoRow, dynamicStyles.infoRow]}>
+          <View style={[styles.infoBox, dynamicStyles.infoBox]}>
+            <Text style={[styles.infoLabel, dynamicStyles.infoLabel]}>예상 기간</Text>
+            <Text style={[styles.infoValue, dynamicStyles.infoValue]}>{dynamicGoal.period}</Text>
           </View>
 
-          <View style={styles.infoRow}>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>예상 기간</Text>
-              <Text style={styles.infoValue}>{dynamicGoal.period}</Text>
-            </View>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoLabel}>언제까지?</Text>
-              <Text style={styles.infoValue}>{dynamicGoal.speed}</Text>
-            </View>
+          <View style={[styles.infoBox, dynamicStyles.infoBox]}>
+            <Text style={[styles.infoLabel, dynamicStyles.infoLabel]}>추천 저축 슬롯</Text>
+            <Text style={[styles.infoValue, dynamicStyles.infoValue]}>
+              {getSavingSlot(dynamicGoal.durationDays, dynamicGoal.period)}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.buttonGroup}>
-          {/* 등록하기 버튼 마우스 오버 효과 추가 */}
+        {/* 하단 버튼 그룹 */}
+        <View style={[styles.buttonGroup, dynamicStyles.buttonGroup]}>
           <Pressable
             onPress={handleRegisterPress}
-            style={({ hovered }) => [
+            style={({ hovered }: any) => [
               styles.primaryButton,
+              dynamicStyles.primaryButton,
               hovered && styles.primaryButtonHovered,
             ]}
           >
-            <Text style={styles.primaryButtonText}>맞아요, 등록하기</Text>
+            <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>맞아요, 등록하기</Text>
           </Pressable>
 
-          {/* 다시 찾기 버튼 마우스 오버 효과 추가 */}
           <Pressable
             onPress={handleBackPress}
-            style={({ hovered }) => [
+            style={({ hovered }: any) => [
               styles.secondaryButton,
+              dynamicStyles.secondaryButton,
               hovered && styles.secondaryButtonHovered,
             ]}
           >
-            <Text style={styles.secondaryButtonText}>다시 찾기</Text>
+            <Text style={[styles.secondaryButtonText, dynamicStyles.secondaryButtonText]}>다시 찾기</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -195,7 +281,7 @@ export default function CheckGoalScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fffefe",
+    backgroundColor: "#ffffff", // 메인배경 흰색으로 통일
   },
   container: {
     flex: 1,
@@ -203,179 +289,108 @@ const styles = StyleSheet.create({
   content: {
     width: "100%",
     alignSelf: "center",
-    // 상단 전체 여백 확보를 위해 추가된 속성
-    marginTop: 20,
   },
   header: {
-    height: 26,
     alignItems: "flex-start",
     justifyContent: "center",
   },
   backButton: {
-    width: 28,
-    height: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: -6,
   },
   titleBlock: {
     alignItems: "center",
   },
   title: {
     color: "#111719",
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 26,
-    letterSpacing: 0,
+    fontWeight: "800",
     textAlign: "center",
   },
   subtitle: {
-    color: "#111719",
-    fontSize: 9,
-    fontWeight: "800",
-    lineHeight: 13,
-    marginTop: 1,
+    color: "#6b7280", // 서브타이틀 회색조로 트렌디하게 변경
+    fontWeight: "700",
     textAlign: "center",
   },
-  resultCard: {
-    width: "100%",
-    backgroundColor: "#fffafb",
-  },
-  image: {
-    width: "100%",
-    overflow: "hidden",
-    backgroundColor: "#e8f6f5",
-  },
-  imageRadius: {
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-  },
-  imagePosition: {
-    transform: [{ scale: 1.02 }],
-  },
   goalSummary: {
-    minHeight: 64,
-    paddingTop: 9,
-    paddingRight: 0,
-    paddingBottom: 9,
-    paddingLeft: 0,
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  goalTextGroup: {
-    flex: 1,
-    paddingRight: 8,
-  },
   goalLabel: {
-    color: "#22292b",
-    fontSize: 10,
-    fontWeight: "700",
-    lineHeight: 14,
+    color: "#111719",
+    fontWeight: "800",
+    flex: 1,
   },
   price: {
-    color: "#070b0c",
-    fontSize: 22,
-    fontWeight: "900",
-    lineHeight: 29,
-    marginTop: 1,
+    color: "#111719",
+    fontWeight: "800",
   },
   editButton: {
-    width: 27,
-    height: 27,
-    borderRadius: 9,
     backgroundColor: "#ffe0c5",
     alignItems: "center",
     justifyContent: "center",
     transitionProperty: "background-color",
     transitionDuration: "0.2s",
-  },
+  } as any,
   editButtonHovered: {
     backgroundColor: "#ffd0a5",
   },
   infoRow: {
     flexDirection: "row",
-    gap: 8,
+    width: "100%",
   },
   infoBox: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#a9e0dc",
-    backgroundColor: "#faffff",
+    borderColor: "#d0eae6", // 얇은 민트빛 보더
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
   },
   infoLabel: {
-    color: "#101719",
-    fontSize: 8,
-    fontWeight: "900",
-    lineHeight: 12,
+    color: "#6B7280",
+    fontWeight: "700",
     textAlign: "center",
   },
   infoValue: {
-    color: "#008f80",
-    fontSize: 9,
-    fontWeight: "900",
-    lineHeight: 13,
-    marginTop: 2,
+    color: "#00a993",
+    fontWeight: "800",
     textAlign: "center",
   },
   buttonGroup: {
-    gap: 8,
+    width: "100%",
   },
   primaryButton: {
     width: "100%",
-    minHeight: 32,
-    borderRadius: 14,
     backgroundColor: "#00a993",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#4aa89d",
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
     transitionProperty: "all",
     transitionDuration: "0.2s",
-  },
+  } as any,
   primaryButtonHovered: {
     backgroundColor: "#008a78",
   },
   primaryButtonText: {
     color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 16,
+    fontWeight: "800",
   },
   secondaryButton: {
     width: "100%",
-    minHeight: 32,
-    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#7e9490",
+    borderColor: "#00a993",
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
     transitionProperty: "all",
     transitionDuration: "0.2s",
-  },
+  } as any,
   secondaryButtonHovered: {
     backgroundColor: "#f0f5f4",
-    borderColor: "#5d736f",
   },
   secondaryButtonText: {
-    color: "#111719",
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 16,
+    color: "#00a993",
+    fontWeight: "800",
   },
 });
