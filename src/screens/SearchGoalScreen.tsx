@@ -39,7 +39,7 @@ const slides = [
   },
   {
     title: "좋은 선택지를 찾는 중이에요",
-    description: "요청하신 에이전스 상품을\n비교하고 있어요",
+    description: "요청하신 상품을 에이전트가\n비교하고 있어요",
   },
 ];
 
@@ -300,7 +300,7 @@ export default function SearchGoalScreen({ navigation , route}: any) {
           >
             <Ionicons name="sparkles" size={15 * sizeScale} color="#009d8b" />
             <Text style={[styles.noticeText, dynamicStyles.noticeText]}>
-              요청하신 에이전스 상품을 찾고있어요
+              요청하신 상품을 에이전트가 찾고있어요
             </Text>
           </TouchableOpacity>
         )}

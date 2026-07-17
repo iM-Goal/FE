@@ -21,7 +21,9 @@ import SpendingReport from "./src/screens/SpendingReport";
 import SpendingDate from "./src/screens/SpendingDate";
 import SpendingCategory from "./src/screens/SpendingCategory";
 import MissionDetail from "./src/screens/MissionDetailScreen";
-import SalaryDistribution from "./src/screens/SalaryDistributioinScreen";
+import SettingGoalScreen from "./src/screens/SettingGoalScreen";
+import PictureUpload from "./src/screens/PictureUpload";
+import LinkUpload from "./src/screens/LinkUpload";
 
 const Stack = createNativeStackNavigator();
 
@@ -58,7 +60,9 @@ export default function App() {
         <Stack.Screen name="SpendingDate" component={SpendingDate} />
         <Stack.Screen name="SpendingCategory" component={SpendingCategory} />
         <Stack.Screen name="MissionDetail" component={MissionDetail} />
-        <Stack.Screen name="SalaryDistribution" component={SalaryDistribution} />
+        <Stack.Screen name="SettingGoalScreen" component={SettingGoalScreen} />
+        <Stack.Screen name="PictureUpload" component={PictureUpload} />
+        <Stack.Screen name="LinkUpload" component={LinkUpload} />
       </Stack.Navigator>
     </NavigationContainer>
   );
