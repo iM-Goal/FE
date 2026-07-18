@@ -39,16 +39,18 @@ export default function GoalDetailScreen({ navigation, route }: any) {
             // 1. [최우선권] 시연 시나리오에 따른 정밀 동적 바인딩 스케줄러
             let currentAmt = 0;
             let rateVal = 0.0;
+            let budegt = 50000;
 
             if (isSalaryDistributed) {
                 currentAmt = 200000;
                 rateVal = 66.7; // 🎯 20만 원 저축 시 66.7% 정밀 고정
             } else if (hasAcceptedLocalMission) {
-                currentAmt = 15000;
-                rateVal = 5.0;  // 🎯 보증금 계약 체결 시 5% 동적 할당
+                budegt = 35000;
+
             } else {
                 currentAmt = 0;
                 rateVal = 0.0;  // 🎯 최초 회원가입/목표 생성 직후는 완벽하게 0원/0%
+                budegt = 50000;
             }
 
             const defaultData = {
@@ -58,7 +60,7 @@ export default function GoalDetailScreen({ navigation, route }: any) {
                 achievementRate: rateVal,
                 endDate: '2026.08.30',
                 daysLeft: 45,
-                dailyBudget: 50000,
+                dailyBudget: budegt,
                 estimatedDate: '8월 30일'
             };
 

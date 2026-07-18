@@ -22,6 +22,10 @@ export default function DepositDetailScreen({ navigation }: any) {
                 },
             });
 
+            // 🎯 [핵심 동기화 가드 장치]: ChatScreen에서 일어난 연동 상태 플래그 포착
+            const isMaturedFlag = await AsyncStorage.getItem('demo_deposit_is_matured') === 'true';
+            const isWithdrawnFlag = await AsyncStorage.getItem('demo_deposit_withdrawn') === 'true';
+
             let sumLocked = 0;
             let list: any[] = [];
 
@@ -34,20 +38,34 @@ export default function DepositDetailScreen({ navigation }: any) {
                 const localAmount = parseInt(localAmountStr, 10);
                 const localDuration = localDurationStr ? parseInt(localDurationStr, 10) : 3;
 
-                sumLocked += localAmount;
+                // 🎯 [시나리오 연동 1]: 출금이 끝난 상태가 아닐 때만 보호 총액 잔액으로 반영
+                if (!isWithdrawnFlag) {
+                    sumLocked += localAmount;
+                }
 
                 const targetDate = new Date();
                 targetDate.setDate(targetDate.getDate() + localDuration);
                 const formattedExpiryDate = `${targetDate.getFullYear()}.${String(targetDate.getMonth() + 1).padStart(2, '0')}.${String(targetDate.getDate()).padStart(2, '0')}`;
+
+                // 🎯 [시나리오 연동 2]: 플래그 유무에 따른 카드 상태 실시간 머신 변경
+                let currentStatus = '진행 중';
+                let currentDDay = `D-${localDuration}`;
+                if (isWithdrawnFlag) {
+                    currentStatus = '해제 완료';
+                    currentDDay = '완료';
+                } else if (isMaturedFlag) {
+                    currentStatus = '만기 완료';
+                    currentDDay = '만기';
+                }
 
                 list.push({
                     id: 'demo-local-mission',
                     name: localTitle ? localTitle.replace(/\d+일/, `${localDuration}일`) : `${localDuration}일 참아서 밸런스 맞추기`,
                     amount: `${localAmount.toLocaleString()}원`,
                     rawAmount: localAmount,
-                    dDay: `D-${localDuration}`,
-                    date: `${formattedExpiryDate} 만기`,
-                    status: '진행 중'
+                    dDay: currentDDay,
+                    date: isWithdrawnFlag ? `${formattedExpiryDate} 해제` : `${formattedExpiryDate} 만기`,
+                    status: currentStatus
                 });
             }
 
@@ -82,7 +100,6 @@ export default function DepositDetailScreen({ navigation }: any) {
                 }
             }
 
-            // 🎯 [초기 제로화 교정]: 더미 데이터 강제 생성을 완전히 삭제하고, 데이터가 없다면 빈 리스트([])로 세팅합니다.
             setMissionList(list);
             setTotalLockedAmount(sumLocked.toLocaleString());
 
@@ -126,7 +143,6 @@ export default function DepositDetailScreen({ navigation }: any) {
                         <ActivityIndicator size="large" color="#009D8B" />
                     </View>
                 ) : missionList.length === 0 ? (
-                    // 🎯 초기 진입 시 깔끔한 완전 빈 상태 UI 노출
                     <View style={styles.emptyMissionContainer}>
                         <Ionicons name="shield-checkmark-outline" size={48} color="#9CA3AF" />
                         <Text style={styles.emptyMissionTitle}>보관 중인 보증금 미션이 없어요</Text>
@@ -138,30 +154,42 @@ export default function DepositDetailScreen({ navigation }: any) {
                     <View style={styles.timelineContainer}>
                         {missionList.map((item, index) => {
                             const isCompleted = item.status === '해제 완료';
+                            const isMatured = item.status === '만기 완료';
 
                             return (
                                 <View key={item.id} style={styles.timelineItem}>
                                     <View style={styles.lineColumn}>
                                         <View style={[
                                             styles.timelineDot,
-                                            isCompleted ? { backgroundColor: '#009D8B', borderColor: '#E6F6F4' } : { backgroundColor: '#009D8B', borderColor: '#FFFFFF' }
+                                            (isCompleted || isMatured) ? { backgroundColor: '#009D8B', borderColor: '#E6F6F4' } : { backgroundColor: '#009D8B', borderColor: '#FFFFFF' }
                                         ]}>
-                                            {isCompleted && <Ionicons name="checkmark" size={8} color="#FFFFFF" />}
+                                            {(isCompleted || isMatured) && <Ionicons name="checkmark" size={8} color="#FFFFFF" />}
                                         </View>
                                         {index !== missionList.length - 1 && <View style={styles.timelineLine} />}
                                     </View>
 
-                                    <View style={[styles.infoCard, isCompleted && styles.completedInfoCard]}>
+                                    <View style={[
+                                        styles.infoCard,
+                                        isCompleted && styles.completedInfoCard,
+                                        isMatured && { borderColor: '#D97706', borderWidth: 1.5 }
+                                    ]}>
                                         <View style={styles.cardHeader}>
-                                            <Text style={[styles.dDayText, isCompleted ? { color: '#9CA3AF' } : { color: '#009D8B' }]}>{item.dDay}</Text>
+                                            <Text style={[
+                                                styles.dDayText,
+                                                isCompleted && { color: '#9CA3AF' },
+                                                item.status === '진행 중' && { color: '#009D8B' },
+                                                isMatured && { color: '#D97706' }
+                                            ]}>{item.dDay}</Text>
                                             <View style={[
                                                 styles.statusBadge,
                                                 item.status === '진행 중' && { backgroundColor: '#E0F2FE' },
+                                                isMatured && { backgroundColor: '#FEF3C7' },
                                                 isCompleted && { backgroundColor: '#E6F6F4' }
                                             ]}>
                                                 <Text style={[
                                                     styles.statusText,
                                                     item.status === '진행 중' && { color: '#0369A1' },
+                                                    isMatured && { color: '#D97706' },
                                                     isCompleted && { color: '#009D8B' }
                                                 ]}>{item.status}</Text>
                                             </View>
@@ -190,7 +218,6 @@ export default function DepositDetailScreen({ navigation }: any) {
     );
 }
 
-// 스타일 시트는 그대로 유지
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, height: 50, marginTop: 10 },

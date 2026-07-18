@@ -50,7 +50,7 @@ export default function MainTabNavigator() {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === '소비분석') {
                         iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-                    } else if (route.name === 'AI채팅') {
+                    } else if (route.name === 'AI알림') {
                         iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                     } else if (route.name === '토큰미션') {
                         iconName = focused ? 'key' : 'key-outline';
@@ -63,7 +63,7 @@ export default function MainTabNavigator() {
 
             <Tab.Screen name="홈" component={HomeScreen} />
             <Tab.Screen name="소비분석" component={SpendingReport} />
-            <Tab.Screen name="AI채팅" component={ChatScreen} />
+            <Tab.Screen name="AI알림" component={ChatScreen} />
             <Tab.Screen name="토큰미션" component={DepositDetailScreen} />
         </Tab.Navigator>
     );

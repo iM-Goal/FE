@@ -42,11 +42,15 @@ export default function HomeScreen({ navigation, route }: any) {
       const salaryDistributedFlag = localSalaryDistributed === 'true';
       setIsSalaryDistributed(salaryDistributedFlag);
 
+      // 🎯 채팅방에서 보증금 출금(환원)을 완료했는지 여부 실시간 포착
+      const isDepositWithdrawnHomeSync = await AsyncStorage.getItem('demo_deposit_withdrawn_home_sync') === 'true';
+
       // 🎯 [자산 실시간 누적 계산 알고리즘 완전 모니터링화]
       let currentLiving = 2000000; // 초기 생활비 무조건 2,000,000원 기본 세팅
       let currentFree = 1000000;   // 초기 자유예금 무조건 1,000,000원 기본 세팅
       let baseGoalAmount = 0;
       let baseRate = 0.0;
+      let displayWalletAmt = '0';   // 🎯 덮어쓰기 방지용 락업 액수 버퍼 변수 선언
 
       // 1. 월급 자동 자전 분배가 체결되었다면 ➔ 각 계좌 몫만큼 누적 가산 및 목표 저축액 가산
       if (salaryDistributedFlag) {
@@ -55,19 +59,34 @@ export default function HomeScreen({ navigation, route }: any) {
         baseGoalAmount = 200000;  // 🎯 분배 체결 시에만 명확하게 20만 원으로 점프
       }
 
-      // 2. 보증금 락업 미션을 수락했다면 ➔ 배달 1.5만 + 보증금 1.5만 총 3만 원 자유 예금에서 차감 누적
+      // 2. 보증금 락업 미션을 수락했다면 ➔ 분기별 도미노 연산 체인 기동
       if (hasAcceptedLocalMission) {
         const lockedVal = parseInt(localLockedStr || '15000', 10);
         const deliverySpending = 15000;
-        currentFree = currentFree - lockedVal - deliverySpending; // 자유예금 실시간 차감
 
-        setTodaySpending({
-          dailyBudget: 50000,
-          remainingBudget: 35000,
-          todaySpend: 15000,
-          usageRate: 30.0
-        });
-        setWalletAmount(lockedVal.toLocaleString());
+        if (isDepositWithdrawnHomeSync) {
+          // 🔓 [보증금 환원 완료 분기]
+          currentFree = currentFree - deliverySpending;
+
+          setTodaySpending({
+            dailyBudget: 50000,
+            remainingBudget: 50000,
+            todaySpend: 0,
+            usageRate: 0.0
+          });
+          displayWalletAmt = '0';
+        } else {
+          // 🔒 [보증금 락업 유지 분기] ➔ 0원 증발 현상 차단을 위해 장부 가드 재배치
+          currentFree = currentFree - lockedVal - deliverySpending;
+
+          setTodaySpending({
+            dailyBudget: 50000,
+            remainingBudget: 35000,
+            todaySpend: 15000,
+            usageRate: 30.0
+          });
+          displayWalletAmt = lockedVal.toLocaleString();
+        }
       } else {
         setTodaySpending({
           dailyBudget: 50000,
@@ -75,22 +94,21 @@ export default function HomeScreen({ navigation, route }: any) {
           todaySpend: 0,
           usageRate: 0.0
         });
-        setWalletAmount('0');
+        displayWalletAmt = '0';
       }
 
       // 최종 목표 저축 달성률 동적 계산 ($200,000 / $300,000 = 66.6%$)
       baseRate = (baseGoalAmount / 300000) * 100;
 
-      // 계산된 시연 시나리오 실시간 누적 수치를 순정 상태값에 주입
+      // 🎯 확정된 동적 누적 수치를 상태값에 안전하게 최종 바인딩 주입!
       setLivingAccountBalance(currentLiving);
       setFreeAccountBalance(currentFree);
+      setWalletAmount(displayWalletAmt); // ➔ 이제 0원으로 절대 오염되지 않고 15,000원이 칼같이 고정됩니다!
 
       if (localGoalCreated === 'true') {
         setHasGoal(true);
         setNickname('아이엠');
 
-        // 🎯 [완벽 고정]: 백엔드 API 상태나 예외 케이스에 오염되지 않도록
-        // 철저하게 로컬 플래그 연산으로 정렬된 clean 장부를 기본 데이터로 확정 렌더링 유도합니다.
         setGoalData({
           title: '제주도 푸른 바다 여행 ✈️',
           targetAmount: 300000,
@@ -106,9 +124,6 @@ export default function HomeScreen({ navigation, route }: any) {
             if (goalsJson.data?.shortGoal) {
               const short = goalsJson.data.shortGoal;
 
-              // 🎯 [치명적 버그 수정 포인트]: 백엔드 응답이 성공이더라도, 사용자가 앱 내에서 아직
-              // [월급 자동 자전 분배]를 최종 수락(`salaryDistributedFlag = true`)한 상태가 아니라면
-              // 서버의 예전 캐시 데이터가 메인 화면을 강제 오버라이딩(66.7%로 강제 회귀)하지 못하도록 조건문 가드를 완전히 단단히 묶어 고정합니다.
               if (salaryDistributedFlag && short.currentAmount > 0) {
                 setGoalData({
                   title: short.itemName,
@@ -120,12 +135,11 @@ export default function HomeScreen({ navigation, route }: any) {
             }
           }
         } catch (err) {
-          // 백엔드가 꺼지거나 예외로 튕겨도 상단에서 확정 바인딩한 순정 장부(0원/0%)가 안전하게 유지됩니다.
+          // 백엔드가 꺼지거나 예외로 튕겨도 상단에서 확정 바인딩한 순정 장부가 안전하게 유지됩니다.
         }
 
       } else {
         setHasGoal(false);
-        setWalletAmount('0');
       }
 
     } catch (error) {
@@ -201,7 +215,7 @@ export default function HomeScreen({ navigation, route }: any) {
                   <Text style={styles.subWelcomeText}>오늘도 목표를 향해 가는 중이에요</Text>
               )}
             </View>
-            <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('ChatScreen')}>
+            <TouchableOpacity style={styles.notiButton} onPress={() => navigation.navigate('AlramChatScreen')}>
               <View style={styles.notiBadgeContainer}>
                 <Ionicons name="notifications-outline" size={30} color="#004B87" />
                 {isSpent && <View style={styles.notiDot} />}
@@ -277,7 +291,7 @@ export default function HomeScreen({ navigation, route }: any) {
             </View>
 
             <TouchableOpacity style={styles.detailButton} onPress={() => navigation.navigate('GoalDetail')}>
-              <Text style={styles.detailButtonText}>자세한 페이스메이커 차트 보기 &gt;</Text>
+              <Text style={styles.detailButtonText}>자세한 차트 보기 &gt;</Text>
             </TouchableOpacity>
           </View>
 
@@ -360,7 +374,7 @@ const styles = StyleSheet.create({
   notiDot: { position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
   characterSection: { alignItems: 'flex-start', marginBottom: 12, width: '100%' },
   speechBubble: { backgroundColor: '#E6F6F4', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start', position: 'relative', marginLeft: 15, borderWidth: 1, borderColor: '#B3E5E0' },
-  speechText: { color: '#004B87', fontSize: 13, fontWeight: '600', textAlign: 'left', lineHeight: 18 },
+  speechText: { color: '#004B87', fontSize: 13, fontFamily : 'IM_Hyemin-Bold', fontWeight: '600', textAlign: 'left', lineHeight: 18 },
   speechTriangle: { position: 'absolute', bottom: -7, left: 24, width: 0, height: 0, borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#E6F6F4' },
   characterRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, marginTop: -15 },
   avatarImage: { width: 150, height: 140, resizeMode: 'contain', zIndex: 10 },
@@ -388,7 +402,7 @@ const styles = StyleSheet.create({
 
   detailButton: { alignItems: 'center', paddingVertical: 4, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10 },
   detailButtonText: { fontSize: 12, color: '#004B87', fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12, marginTop: 4, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12, marginTop: 10, letterSpacing: -0.3 },
   walletCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, borderWidth: 1.5, borderColor: '#009D8B', shadowColor: '#009D8B', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
   walletHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12 },
   walletTitleRow: { flexDirection: 'row', alignItems: 'center' },
