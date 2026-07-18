@@ -62,7 +62,7 @@ export default function MissionDetailScreen({ route, navigation }: any) {
     const showSuccessAlert = (txHash: string, amount: number) => {
         Alert.alert(
             '🎯 스마트 계약 체결 완료',
-            `미션 수락 성공!\n보증금 ${formatNumber(amount)}원이 iMKRW로 발행되어 Kaia 컨트랙트에 안전하게 잠겼습니다.\n\nTx Hash: ${txHash.substring(0, 15)}...`,
+            `미션 수락 성공!\n보증금 ${formatNumber(amount)}원이 iMKRW로 발행되어 Kaia 컨트랙트에 안전하게 잠겼습니다.`,
             [
                 {
                     text: '보증금 현황 확인',
